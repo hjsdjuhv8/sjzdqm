@@ -1,0 +1,14 @@
+{
+  // Cloudflare Workers（静态资源）配置
+  // 这个文件让 `npx wrangler deploy` 知道要把 public/ 目录当作静态站点发布。
+  // build.py 会先生成 public/，再由 wrangler 上传。
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sjzdqm",
+  "compatibility_date": "2026-10-22",
+
+  "assets": {
+    "directory": "./public",
+    // 单页站点：找不到的路径交给 404 处理，不要回退到 index.html
+    "not_found_handling": "404-page"
+  }
+}
