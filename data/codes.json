@@ -1,0 +1,48 @@
+{
+ "ok": true,
+ "total": 3,
+ "items": [
+  {
+   "id": 1,
+   "code": "腾龙突击步枪-全面战场-6IL87QG013CE082VBOHIS",
+   "gun_name": "腾龙突击步枪",
+   "category": "突击步枪",
+   "mode": "全面战场",
+   "season": "S9",
+   "price": 300000,
+   "tags": "30发弹匣,无导气,快攻",
+   "notes": "容错率高、机动性拉满，适合快攻突袭",
+   "video_url": "",
+   "copied": 8,
+   "updated_at": "2026-10-22T14:07:57Z"
+  },
+  {
+   "id": 3,
+   "code": "AUG突击步枪-全面战场-6IL88AC013CE082VBOHIS",
+   "gun_name": "AUG突击步枪",
+   "category": "突击步枪",
+   "mode": "全面战场",
+   "season": "S9",
+   "price": 220000,
+   "tags": "高倍镜,压枪稳",
+   "notes": "中距离架点，射击稳定性好",
+   "video_url": "",
+   "copied": 6,
+   "updated_at": "2026-10-22T14:07:57Z"
+  },
+  {
+   "id": 2,
+   "code": "SCAR-H战斗步枪-5116089223937551183-烽火地带",
+   "gun_name": "SCAR-H战斗步枪",
+   "category": "战斗步枪",
+   "mode": "烽火地带",
+   "season": "S9",
+   "price": 150000,
+   "tags": "稳定,中距离",
+   "notes": "中距离压制，后坐力可控",
+   "video_url": "",
+   "copied": 5,
+   "updated_at": "2026-10-22T14:07:57Z"
+  }
+ ]
+}

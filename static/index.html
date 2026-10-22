@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>三角洲行动 改枪码大全 · 一键复制</title>
+<meta name="description" content="三角洲行动改枪码查询：烽火地带、全面战场全模式配装，按枪名、造价、距离筛选，一键复制改枪码直接进游戏使用。">
+<meta name="theme-color" content="#0c1016">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="/">
+      <span class="brand-mark">DF</span>
+      <span class="brand-text">
+        <b>改枪码库</b>
+        <em>三角洲行动</em>
+      </span>
+    </a>
+    <div class="topbar-meta" id="metaLine">正在载入…</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <h1>搜一把枪，复制一个码，进游戏就用</h1>
+    <p class="hero-sub">
+      全部改枪码由博主本人从游戏内导出，按赛季维护。点一下卡片上的按钮即可复制，
+      游戏内「改装 → 导入配装」粘贴使用。
+    </p>
+
+    <div class="searchbox">
+      <svg class="searchbox-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path>
+      </svg>
+      <input id="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="搜索枪名 / 标签 / 场景，例如：腾龙、近战、30万以内">
+      <button id="qClear" class="searchbox-clear" title="清空" hidden>✕</button>
+    </div>
+
+    <div class="filters">
+      <div class="filter-group" id="modeFilter">
+        <span class="filter-label">模式</span>
+      </div>
+      <div class="filter-group" id="catFilter">
+        <span class="filter-label">类型</span>
+      </div>
+      <div class="filter-group filter-tail">
+        <span class="filter-label">排序</span>
+        <select id="sort">
+          <option value="hot">最多人复制</option>
+          <option value="new">最新更新</option>
+          <option value="name">枪名 A→Z</option>
+          <option value="price">造价从低到高</option>
+        </select>
+        <select id="season" hidden></select>
+      </div>
+    </div>
+  </section>
+
+  <div class="resultbar">
+    <span id="resultCount">—</span>
+    <span class="resultbar-hint" id="activeHint"></span>
+  </div>
+
+  <section id="grid" class="grid" aria-live="polite"></section>
+
+  <div id="empty" class="empty" hidden>
+    <div class="empty-mark">🔍</div>
+    <p id="emptyText">没有找到匹配的改枪码</p>
+    <button class="btn btn-ghost" id="resetBtn">清空筛选条件</button>
+  </div>
+
+  <div id="loadMoreWrap" class="loadmore-wrap" hidden>
+    <button class="btn btn-ghost" id="loadMore">载入更多</button>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>
+      本站仅作玩家交流展示，改枪码由玩家在游戏内生成并分享，游戏素材与数据版权归腾讯所有。
+      如权利人认为内容不妥，请联系删除。
+    </p>
+    <p class="foot-dim">不收集任何账号信息，复制计数不含个人身份。</p>
+  </div>
+</footer>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

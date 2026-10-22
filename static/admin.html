@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>后台 · 改枪码库</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+
+<!-- ============================ 登录 ============================ -->
+<section id="loginView" class="login-view" hidden>
+  <div class="login-card">
+    <h1>改枪码库 · 后台</h1>
+    <p class="login-sub">管理密码在服务器上的 <code>data/.admin-password</code>，首次启动时也会打印在终端里。</p>
+    <form id="loginForm" autocomplete="off">
+      <input id="pw" type="password" placeholder="管理密码" autocomplete="current-password">
+      <button class="btn btn-primary" type="submit">登录</button>
+    </form>
+    <p id="loginErr" class="login-err" hidden></p>
+  </div>
+</section>
+
+<!-- ============================ 主界面 ============================ -->
+<section id="adminView" hidden>
+
+  <header class="ahead">
+    <div class="ahead-in">
+      <div class="ahead-title">
+        <span class="brand-mark">DF</span>
+        <div><b>改枪码库 · 后台</b><em id="dbStat">—</em></div>
+      </div>
+      <div class="ahead-actions">
+        <a class="btn btn-mini" href="/" target="_blank" rel="noopener">打开前台 ↗</a>
+        <a class="btn btn-mini" id="staticBtn" href="/api/codes/static"
+           title="下载一个可直接上传到对象存储/静态托管的 zip">导出静态站</a>
+        <a class="btn btn-mini" id="exportBtn" href="/api/codes/export">导出全部</a>
+        <button class="btn btn-mini btn-danger-ghost" id="logoutBtn" type="button">退出</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="amain">
+
+    <!-- ------------------------------------------------ 批量导入 -->
+    <section class="panel" id="importPanel">
+      <div class="panel-head">
+        <h2>批量粘贴导入</h2>
+        <span class="hint">游戏内点「分享」复制出来的文本，一行一条，直接全选粘贴进来</span>
+      </div>
+
+      <div class="import-grid">
+        <div class="import-left">
+          <textarea id="pasteArea" spellcheck="false"
+            placeholder="腾龙突击步枪-全面战场-6IL87QG013CE082VBOHIS
+AK-12突击步枪-全面战场-6IL88AC013CE082VBOHIS
+SCAR-H战斗步枪-5116089223937551183-烽火地带"></textarea>
+
+          <div class="import-defaults">
+            <label>默认模式
+              <select id="dMode">
+                <option value="">按解析结果</option>
+                <option value="烽火地带">烽火地带</option>
+                <option value="全面战场">全面战场</option>
+              </select>
+            </label>
+            <label>默认类型
+              <select id="dCategory">
+                <option value="">自动推断</option>
+                <option>突击步枪</option><option>战斗步枪</option><option>冲锋枪</option>
+                <option>射手步枪</option><option>狙击步枪</option><option>霰弹枪</option>
+                <option>轻机枪</option><option>手枪</option><option>其他</option>
+              </select>
+            </label>
+            <label>赛季
+              <input id="dSeason" type="text" placeholder="S9" maxlength="12">
+            </label>
+            <label class="chk">
+              <input id="dCommit" type="checkbox" checked> 直接入库
+            </label>
+          </div>
+
+          <div class="import-btns">
+            <button class="btn btn-primary" id="parseBtn" type="button">解析预览</button>
+            <button class="btn btn-ghost" id="importBtn" type="button" disabled>确认导入</button>
+            <button class="btn btn-ghost" id="clearBtn" type="button">清空</button>
+          </div>
+          <p class="micro" id="importMsg"></p>
+        </div>
+
+        <div class="import-right">
+          <div class="preview-head">
+            <b id="previewTitle">解析结果</b>
+            <button class="btn btn-mini" id="fillGunBtn" type="button" hidden>用枪名填充空缺</button>
+          </div>
+          <div id="previewList" class="preview-list">
+            <p class="preview-empty">粘贴后点「解析预览」，这里会列出识别到的每一把枪。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------ 列表管理 -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>已收录</h2>
+        <div class="panel-head-tools">
+          <input id="searchAdmin" type="search" placeholder="搜索枪名 / 码 / 标签">
+          <span class="hint" id="adminCount"></span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="atable">
+          <thead>
+            <tr>
+              <th style="width:190px">枪名</th>
+              <th style="width:64px">类型</th>
+              <th style="width:84px">模式</th>
+              <th style="width:58px">赛季</th>
+              <th style="width:74px">造价</th>
+              <th style="width:150px">标签</th>
+              <th>改枪码</th>
+              <th style="width:52px">复制</th>
+              <th style="width:66px">状态</th>
+              <th style="width:96px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="adminBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</section>
+
+<div id="toast" class="toast"></div>
+<script src="/static/admin.js"></script>
+</body>
+</html>

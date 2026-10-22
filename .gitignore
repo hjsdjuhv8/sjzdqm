@@ -1,0 +1,30 @@
+# ---- 本地数据库：不进仓库（数据通过 data/codes.json 分发）----
+data/codes.db
+data/codes.db-wal
+data/codes.db-shm
+
+# ---- 管理密码：绝对不进仓库 ----
+data/.admin-password
+
+# ---- 构建产物 ----
+public/
+tests/_static_out/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 临时文件 ----
+*.log
+*.zip
+!gun-codes-static.zip

@@ -1,0 +1,217 @@
+/* ==========================================================================
+   后台样式 —— 与前台同一套配色变量
+   ========================================================================== */
+
+:root {
+  --bg: #0b0f14; --bg-soft: #111823;
+  --panel: #141c28; --panel-hi: #1b2534;
+  --line: #24303f; --line-soft: #1c2531;
+  --txt: #e6edf6; --txt-dim: #94a3b8; --txt-faint: #64748b;
+  --accent: #e8a33d; --accent-dim: #7a5a26;
+  --ok: #34d399; --danger: #f87171;
+  --radius: 14px; --radius-sm: 9px;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--txt);
+  font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+}
+h1, h2 { margin: 0; }
+a { color: inherit; text-decoration: none; }
+[hidden] { display: none !important; }
+
+/* ------------------------------------------------------------- 登录页 */
+
+.login-view { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.login-card {
+  width: 100%; max-width: 380px; padding: 30px 26px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.login-card h1 { font-size: 19px; margin-bottom: 8px; }
+.login-sub { font-size: 12.5px; color: var(--txt-faint); margin: 0 0 20px; line-height: 1.6; }
+.login-sub code { font-family: var(--mono); color: var(--txt-dim); background: var(--bg-soft); padding: 1px 5px; border-radius: 4px; }
+#loginForm { display: flex; flex-direction: column; gap: 10px; }
+#pw {
+  height: 44px; padding: 0 13px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--bg-soft);
+  color: var(--txt); font-size: 14px; outline: none; font-family: var(--mono);
+}
+#pw:focus { border-color: var(--accent-dim); box-shadow: 0 0 0 3px rgba(232,163,61,.12); }
+.login-err { color: var(--danger); font-size: 13px; margin: 12px 0 0; }
+
+/* ------------------------------------------------------------- 顶栏 */
+
+.ahead { position: sticky; top: 0; z-index: 10; background: rgba(11,15,20,.88);
+  backdrop-filter: blur(12px); border-bottom: 1px solid var(--line-soft); }
+.ahead-in {
+  max-width: 1280px; margin: 0 auto; padding: 0 18px; height: 58px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.ahead-title { display: flex; align-items: center; gap: 10px; }
+.ahead-title b { font-size: 14.5px; display: block; line-height: 1.2; }
+.ahead-title em { font-style: normal; font-size: 11.5px; color: var(--txt-faint); }
+.brand-mark {
+  width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center;
+  border-radius: 8px; background: linear-gradient(145deg, var(--accent), #b4761f);
+  color: #1a1206; font-weight: 800; font-size: 12px;
+}
+.ahead-actions { display: flex; gap: 8px; }
+
+/* ------------------------------------------------------------- 通用按钮 */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 40px; padding: 0 16px; border-radius: var(--radius-sm);
+  border: 1px solid transparent; font: inherit; font-weight: 600; font-size: 14px;
+  cursor: pointer; transition: filter .14s, background .14s, border-color .14s, color .14s;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary { background: linear-gradient(180deg, #e8a33d, #cf8a26); color: #1a1206; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.07); }
+.btn-ghost { background: transparent; border-color: var(--line); color: var(--txt-dim); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--accent-dim); color: var(--txt); }
+.btn-mini { height: 30px; padding: 0 11px; font-size: 12.5px; border-radius: 7px;
+  background: transparent; border: 1px solid var(--line); color: var(--txt-dim); }
+.btn-mini:hover { border-color: var(--accent-dim); color: var(--txt); }
+.btn-danger-ghost:hover { border-color: #7f1d1d; color: var(--danger); }
+
+/* ------------------------------------------------------------- 主体 */
+
+.amain { max-width: 1280px; margin: 0 auto; padding: 20px 18px 60px; display: flex;
+  flex-direction: column; gap: 18px; }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px;
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.panel-head h2 { font-size: 15.5px; }
+.hint { font-size: 12px; color: var(--txt-faint); }
+.panel-head-tools { display: flex; align-items: center; gap: 10px; }
+#searchAdmin, #pasteArea, #dSeason {
+  border: 1px solid var(--line); background: var(--bg-soft); color: var(--txt);
+  border-radius: var(--radius-sm); outline: none; font: inherit;
+}
+#searchAdmin { height: 34px; padding: 0 11px; width: 220px; font-size: 13px; }
+#searchAdmin:focus, #dSeason:focus { border-color: var(--accent-dim); }
+
+/* ------------------------------------------------------------- 导入区 */
+
+.import-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.import-left { display: flex; flex-direction: column; gap: 10px; }
+#pasteArea {
+  height: 190px; padding: 11px 13px; resize: vertical;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.75;
+  color: #cbd5e1;
+}
+#pasteArea:focus { border-color: var(--accent-dim); box-shadow: 0 0 0 3px rgba(232,163,61,.1); }
+
+.import-defaults { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.import-defaults label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--txt-faint);
+}
+.import-defaults select {
+  height: 30px; padding: 0 24px 0 8px; border-radius: 7px;
+  border: 1px solid var(--line); background: var(--bg-soft); color: var(--txt-dim);
+  font-size: 12.5px; cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6'%3E%3Cpath d='M1 1l3.5 3.5L8 1' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 7px center;
+}
+#dSeason { height: 30px; padding: 0 9px; width: 74px; font-size: 12.5px; }
+.import-defaults .chk { color: var(--txt-dim); cursor: pointer; }
+.import-defaults .chk input { accent-color: var(--accent); }
+
+.import-btns { display: flex; gap: 9px; flex-wrap: wrap; }
+.micro { font-size: 12px; color: var(--txt-faint); margin: 0; min-height: 18px; }
+.micro.warn { color: var(--accent); }
+
+/* 预览列 */
+.preview-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12.5px; color: var(--txt-dim); margin-bottom: 8px; gap: 8px;
+}
+.preview-list {
+  height: 292px; overflow-y: auto; border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm); background: #0a0e13; padding: 6px;
+}
+.preview-empty { color: var(--txt-faint); font-size: 12.5px; padding: 16px 12px; margin: 0; }
+.pv-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 8px;
+  padding: 7px 9px; border-radius: 7px; font-size: 12.5px;
+  border-bottom: 1px solid #121821;
+}
+.pv-row:last-child { border-bottom: 0; }
+.pv-row.bad { background: rgba(248,113,113,.06); }
+.pv-gun { color: var(--txt); overflow-wrap: anywhere; }
+.pv-gun input {
+  width: 100%; background: transparent; border: 0; border-bottom: 1px dashed var(--line);
+  color: var(--txt); font: inherit; padding: 1px 0; outline: none;
+}
+.pv-badge { font-size: 10.5px; color: var(--txt-faint); white-space: nowrap; }
+.pv-badge.dup { color: var(--accent); }
+.pv-badge.err { color: var(--danger); }
+.pv-code {
+  grid-column: 1 / -1; font-family: var(--mono); font-size: 11.5px;
+  color: var(--txt-faint); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- 表格 */
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); }
+.atable { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 940px; }
+.atable th {
+  text-align: left; font-weight: 600; color: var(--txt-faint); font-size: 11.5px;
+  padding: 9px 8px; background: var(--bg-soft); position: sticky; top: 0;
+  border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.atable td { padding: 5px 8px; border-bottom: 1px solid #131a24; vertical-align: middle; }
+.atable tr:hover td { background: rgba(232,163,61,.03); }
+.atable input, .atable select {
+  width: 100%; background: transparent; border: 1px solid transparent;
+  border-radius: 5px; color: var(--txt); font: inherit; font-size: 12.5px;
+  padding: 4px 5px; outline: none;
+}
+.atable input:hover, .atable select:hover { border-color: var(--line-soft); background: var(--bg-soft); }
+.atable input:focus, .atable select:focus { border-color: var(--accent-dim); background: var(--bg-soft); }
+.atable .cell-code { font-family: var(--mono); font-size: 11.5px; color: var(--txt-faint); }
+.atable .cell-num { text-align: center; font-variant-numeric: tabular-nums; color: var(--txt-faint); }
+.row-actions { display: flex; gap: 5px; }
+.mini-btn {
+  height: 26px; padding: 0 8px; font-size: 11.5px; border-radius: 6px;
+  border: 1px solid var(--line); background: transparent; color: var(--txt-dim);
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.mini-btn:hover { border-color: var(--accent-dim); color: var(--txt); }
+.mini-btn.del:hover { border-color: #7f1d1d; color: var(--danger); }
+.mini-btn.on { background: rgba(232,163,61,.14); border-color: var(--accent); color: var(--accent); }
+.dirty { box-shadow: inset 2px 0 0 var(--accent); }
+
+/* ------------------------------------------------------------- toast */
+
+.toast {
+  position: fixed; left: 50%; bottom: 30px; transform: translate(-50%, 12px);
+  background: #1f2937; border: 1px solid #374151; color: #fff;
+  padding: 10px 18px; border-radius: 999px; font-size: 13px;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 60;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.err { background: #3f1d1d; border-color: #7f1d1d; }
+
+/* ------------------------------------------------------------- 响应式 */
+
+@media (max-width: 900px) {
+  .import-grid { grid-template-columns: 1fr; }
+  .preview-list { height: 220px; }
+  #searchAdmin { width: 150px; }
+  .ahead-actions .btn-mini:nth-child(2) { display: none; }
+}
