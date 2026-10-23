@@ -7,6 +7,11 @@
 
   var PAGE_SIZE = 24;
 
+  // 与游戏内筛选栏一致的固定顺序（静态模式下没有后端时用）
+  var MODE_ORDER = ['烽火地带', '全面战场', '黑潮爆破'];
+  var CAT_ORDER = ['步枪', '冲锋枪', '霰弹枪', '轻机枪',
+                   '精确射手步枪', '狙击步枪', '手枪', '特殊武器'];
+
   var state = {
     q: '', mode: '', category: '', season: '', sort: 'hot',
     offset: 0, total: 0, loading: false, items: []
@@ -15,8 +20,8 @@
   var el = {
     q: document.getElementById('q'),
     qClear: document.getElementById('qClear'),
-    modeFilter: document.getElementById('modeFilter'),
-    catFilter: document.getElementById('catFilter'),
+    modeCards: document.getElementById('modeCards'),
+    catRail: document.getElementById('catRail'),
     sort: document.getElementById('sort'),
     season: document.getElementById('season'),
     grid: document.getElementById('grid'),
@@ -28,6 +33,7 @@
     loadMoreWrap: document.getElementById('loadMoreWrap'),
     loadMore: document.getElementById('loadMore'),
     metaLine: document.getElementById('metaLine'),
+    heroStat: document.getElementById('heroStat'),
     toast: document.getElementById('toast')
   };
 
@@ -112,11 +118,50 @@
 
   /* ---------------------------------------------------------- 渲染 ---------- */
 
+  // 枪械类型图标（对齐游戏内分类）
+  var CAT_ICON = {
+    '步枪':
+      '<svg viewBox="0 0 24 24"><path d="M2 12h11l2-2h5v2h2"/><path d="M5 12v3"/><path d="M9 12v2"/></svg>',
+    '冲锋枪':
+      '<svg viewBox="0 0 24 24"><path d="M3 12h7l2-2h4v3h4"/><path d="M7 12v3"/></svg>',
+    '霰弹枪':
+      '<svg viewBox="0 0 24 24"><path d="M2 11h14l2-2h4"/><path d="M6 11v3"/><path d="M11 11v2"/></svg>',
+    '轻机枪':
+      '<svg viewBox="0 0 24 24"><path d="M2 12h12l2-2h5"/><path d="M6 12v4"/><circle cx="14" cy="16" r="2.4"/></svg>',
+    '精确射手步枪':
+      '<svg viewBox="0 0 24 24"><path d="M2 13h12l2-3h5"/><circle cx="8" cy="9" r="2"/><path d="M8 11v2"/></svg>',
+    '狙击步枪':
+      '<svg viewBox="0 0 24 24"><path d="M2 14h13l2-4h4"/><circle cx="7" cy="8" r="1.8"/><path d="M7 10v4"/></svg>',
+    '手枪':
+      '<svg viewBox="0 0 24 24"><path d="M5 9h6v3h4l1 5h-4l-1-3H5z"/></svg>',
+    '特殊武器':
+      '<svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.2L20 10l-4 3.6L17 20l-5-2.6L7 20l1-6.4L4 10l5.8-1.8z"/></svg>',
+    '其他':
+      '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M9 12h6"/></svg>'
+  };
+
+  // 模式 → 卡片顶部色条
+  var MODE_COLOR = {
+    '烽火地带': 'var(--c-firestorm)',
+    '全面战场': 'var(--c-battle)',
+    '黑潮爆破': 'var(--c-blacktide)'
+  };
+
+  function catIcon(cat) {
+    return CAT_ICON[cat] || CAT_ICON['其他'];
+  }
+
   function cardHTML(it) {
     var meta = [];
-    if (it.price > 0) meta.push('<span>造价 ' + esc(money(it.price)) + '</span>');
+    if (it.price > 0) {
+      meta.push('<span class="card-price">造价 ' + esc(money(it.price)) + '</span>');
+    }
     if (it.season) meta.push('<span>' + esc(it.season) + '</span>');
-    if (it.category) meta.push('<span>' + esc(it.category) + '</span>');
+    if (it.category) {
+      meta.push('<span class="cat-pill">' + catIcon(it.category) +
+                esc(it.category) + '</span>');
+    }
+
     var modeBadge = it.mode
       ? '<span class="badge badge-mode-' + esc(it.mode) + '">' + esc(it.mode) + '</span>'
       : '';
@@ -125,9 +170,11 @@
       .map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
 
     var note = it.notes ? '<p class="card-note">' + esc(it.notes) + '</p>' : '';
+    var accent = MODE_COLOR[it.mode] || 'var(--line)';
 
     return '' +
-      '<article class="card" data-code="' + esc(it.code) + '">' +
+      '<article class="card" data-code="' + esc(it.code) + '" ' +
+        'style="--card-accent:' + accent + '">' +
         '<div class="card-head">' +
           '<h2 class="card-gun">' + esc(it.gun_name || '未命名') + '</h2>' +
           modeBadge +
@@ -326,41 +373,63 @@
 
   /* ---------------------------------------------------------- 筛选 UI ------- */
 
-  function buildChips(host, values, key, allLabel) {
-    var html = '<button class="chip' + (state[key] === '' ? ' on' : '') +
-               '" data-val="">' + allLabel + '</button>';
-    values.forEach(function (v) {
-      html += '<button class="chip' + (state[key] === v ? ' on' : '') +
-              '" data-val="' + esc(v) + '">' + esc(v) + '</button>';
+  // 模式：使用页面里预置的 .mode-card 大卡片，不再动态生成
+  function bindModeCards() {
+    if (!el.modeCards) return;
+    el.modeCards.addEventListener('click', function (e) {
+      var card = e.target.closest('.mode-card');
+      if (!card) return;
+      state.mode = card.dataset.val || '';
+      Array.prototype.forEach.call(el.modeCards.querySelectorAll('.mode-card'),
+        function (c) { c.classList.toggle('is-on', c === card); });
+      fetchPage(true);
     });
-    host.insertAdjacentHTML('beforeend', html);
-    host.addEventListener('click', function (e) {
-      var btn = e.target.closest('.chip');
+  }
+
+  // 枪械类型：图标导轨 + 每条数量
+  function renderCatRail(categories, counts) {
+    if (!el.catRail) return;
+    var html = '<button class="cat-item cat-all' + (state.category === '' ? ' on' : '') +
+               '" data-val="">' +
+               '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/>' +
+               '<rect x="14" y="3" width="7" height="7" rx="1.5"/>' +
+               '<rect x="3" y="14" width="7" height="7" rx="1.5"/>' +
+               '<rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' +
+               '<span>全部枪械</span>' +
+               '</button>';
+
+    categories.forEach(function (c) {
+      var n = counts[c] || 0;
+      html += '<button class="cat-item' + (state.category === c ? ' on' : '') +
+              '" data-val="' + esc(c) + '">' +
+              catIcon(c) +
+              '<span>' + esc(c) + '</span>' +
+              (n ? '<span class="cat-num">' + n + '</span>' : '') +
+              '</button>';
+    });
+
+    el.catRail.innerHTML = html;
+    el.catRail.addEventListener('click', function (e) {
+      var btn = e.target.closest('.cat-item');
       if (!btn) return;
-      state[key] = btn.dataset.val || '';
-      Array.prototype.forEach.call(host.querySelectorAll('.chip'), function (c) {
-        c.classList.toggle('on', c === btn);
-      });
+      state.category = btn.dataset.val || '';
+      Array.prototype.forEach.call(el.catRail.querySelectorAll('.cat-item'),
+        function (c) { c.classList.toggle('on', c === btn); });
       fetchPage(true);
     });
   }
 
   function applyMeta(d) {
     el.metaLine.innerHTML = '已收录 <b>' + d.total + '</b> 条改枪码';
-
-    var modes = d.modes || [];
-    if (modes.length) buildChips(el.modeFilter, modes, 'mode', '全部');
-
-    var cats = d.categories || [];
-    if (cats.length) {
-      // 只显示库里真实存在的类型，避免一排空按钮
-      var present = {};
-      (d.guns || []).forEach(function (g) {
-        cats.forEach(function (c) { if (g && g.indexOf(c) >= 0) present[c] = 1; });
-      });
-      var list = cats.filter(function (c) { return present[c]; });
-      buildChips(el.catFilter, list.length ? list : cats, 'category', '全部');
+    if (el.heroStat) {
+      el.heroStat.textContent = '已收录 ' + d.total + ' 条改枪码 · 持续更新';
     }
+
+    // 分类：只用数据库里真实存在的类型，避免一排空按钮
+    var cats = (d.categories || []).slice();
+    var counts = d.categoryCounts || {};
+    var list = cats.filter(function (c) { return counts[c] > 0; });
+    renderCatRail(list.length ? list : cats, counts);
 
     if (d.seasons && d.seasons.length) {
       var opt = '<option value="">全部赛季</option>';
@@ -379,17 +448,17 @@
   function loadMetaStatic() {
     loadStaticData().then(function (data) {
       var items = data.items || [];
-      var modes = {}, cats = {}, seasons = {}, guns = {};
+      var seasons = {}, guns = {}, counts = {};
       items.forEach(function (i) {
-        if (i.mode) modes[i.mode] = 1;
-        if (i.category) cats[i.category] = 1;
         if (i.season) seasons[i.season] = 1;
         if (i.gun_name) guns[i.gun_name] = 1;
+        if (i.category) counts[i.category] = (counts[i.category] || 0) + 1;
       });
       applyMeta({
         total: items.length,
-        modes: Object.keys(modes),
-        categories: Object.keys(cats),
+        modes: MODE_ORDER,
+        categories: CAT_ORDER,
+        categoryCounts: counts,
         seasons: Object.keys(seasons).sort().reverse(),
         guns: Object.keys(guns)
       });
@@ -434,10 +503,17 @@
   el.resetBtn.addEventListener('click', function () {
     state.q = ''; state.mode = ''; state.category = ''; state.season = '';
     el.q.value = ''; el.qClear.hidden = true;
-    el.season.value = '';
-    Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (c) {
-      c.classList.toggle('on', (c.dataset.val || '') === '');
-    });
+    if (el.season) el.season.value = '';
+    // 模式大卡片：只勾「全部模式」
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.mode-card'), function (c) {
+        c.classList.toggle('is-on', (c.dataset.val || '') === '');
+      });
+    // 枪械类型导轨：只勾「全部枪械」
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.cat-item'), function (c) {
+        c.classList.toggle('on', (c.dataset.val || '') === '');
+      });
     fetchPage(true);
   });
 
@@ -461,6 +537,7 @@
     }
   })();
 
+  bindModeCards();
   loadMeta();
   fetchPage(true);
 })();

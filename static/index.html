@@ -27,9 +27,13 @@
 <main class="wrap">
 
   <section class="hero">
-    <h1>搜一把枪，复制一个码，进游戏就用</h1>
+    <div class="hero-eyebrow">
+      <span class="pulse-dot"></span>
+      <span id="heroStat">正在载入改枪码…</span>
+    </div>
+    <h1>搜一把枪，<br class="hero-br">复制一个码，进游戏就用</h1>
     <p class="hero-sub">
-      全部改枪码由博主本人从游戏内导出，按赛季维护。点一下卡片上的按钮即可复制，
+      改枪码由博主从游戏内导出，按赛季维护。点一下卡片上的按钮即可复制，
       游戏内「改装 → 导入配装」粘贴使用。
     </p>
 
@@ -38,39 +42,78 @@
         <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path>
       </svg>
       <input id="q" type="search" autocomplete="off" spellcheck="false"
-             placeholder="搜索枪名 / 标签 / 场景，例如：腾龙、近战、30万以内">
+             placeholder="搜枪名 / 标签 / 场景，例如：腾龙、近战、30万以内">
       <button id="qClear" class="searchbox-clear" title="清空" hidden>✕</button>
     </div>
+  </section>
 
-    <div class="filters">
-      <div class="filter-group" id="modeFilter">
-        <span class="filter-label">模式</span>
-      </div>
-      <div class="filter-group" id="catFilter">
-        <span class="filter-label">类型</span>
-      </div>
-      <div class="filter-group filter-tail">
-        <span class="filter-label">排序</span>
+  <!-- 模式选择：视觉化卡片，三种模式各自的配色 -->
+  <section class="mode-cards" id="modeCards" aria-label="选择模式">
+    <button class="mode-card mode-all is-on" data-val="">
+      <span class="mode-card-glow"></span>
+      <span class="mode-card-body">
+        <span class="mode-card-title">全部模式</span>
+        <span class="mode-card-desc">所有配装一次看完</span>
+      </span>
+    </button>
+    <button class="mode-card mode-firestorm" data-val="烽火地带">
+      <span class="mode-card-glow"></span>
+      <span class="mode-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 2s4 4 4 7a4 4 0 0 1-8 0c0-3 4-7 4-7z"/><path d="M7 14a5 5 0 0 0 10 0"/><path d="M12 19v3"/></svg>
+      </span>
+      <span class="mode-card-body">
+        <span class="mode-card-title">烽火地带</span>
+        <span class="mode-card-desc">摸金 / 生存</span>
+      </span>
+    </button>
+    <button class="mode-card mode-battlefield" data-val="全面战场">
+      <span class="mode-card-glow"></span>
+      <span class="mode-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-7 2 2h5"/></svg>
+      </span>
+      <span class="mode-card-body">
+        <span class="mode-card-title">全面战场</span>
+        <span class="mode-card-desc">大规模团战</span>
+      </span>
+    </button>
+    <button class="mode-card mode-blacktide" data-val="黑潮爆破">
+      <span class="mode-card-glow"></span>
+      <span class="mode-card-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 2l3 6 6 1-4.5 4.5 1 6.5-5.5-3-5.5 3 1-6.5L3 9l6-1z"/></svg>
+      </span>
+      <span class="mode-card-body">
+        <span class="mode-card-title">黑潮爆破</span>
+        <span class="mode-card-desc">爆破 / 攻坚</span>
+      </span>
+    </button>
+  </section>
+
+  <!-- 枪械类型：图标导航，对齐游戏内「全部枪械」筛选栏 -->
+  <nav class="cat-rail" id="catRail" aria-label="枪械类型"></nav>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="result-count" id="resultCount">—</span>
+      <span class="result-hint" id="activeHint"></span>
+    </div>
+    <div class="toolbar-right">
+      <label class="sort-wrap">
+        <span>排序</span>
         <select id="sort">
           <option value="hot">最多人复制</option>
           <option value="new">最新更新</option>
           <option value="name">枪名 A→Z</option>
           <option value="price">造价从低到高</option>
         </select>
-        <select id="season" hidden></select>
-      </div>
+      </label>
+      <select id="season" class="season-select" hidden></select>
     </div>
-  </section>
-
-  <div class="resultbar">
-    <span id="resultCount">—</span>
-    <span class="resultbar-hint" id="activeHint"></span>
   </div>
 
   <section id="grid" class="grid" aria-live="polite"></section>
 
   <div id="empty" class="empty" hidden>
-    <div class="empty-mark">🔍</div>
+    <div class="empty-mark">🎯</div>
     <p id="emptyText">没有找到匹配的改枪码</p>
     <button class="btn btn-ghost" id="resetBtn">清空筛选条件</button>
   </div>

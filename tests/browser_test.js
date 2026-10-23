@@ -249,12 +249,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   console.log('='.repeat(66));
   console.log('4. 筛选与空状态');
   console.log('='.repeat(66));
-  await evl(`document.querySelector('#modeFilter .chip[data-val="烽火地带"]').click();`);
+  await evl(`document.querySelector('.mode-card[data-val="烽火地带"]').click();`);
   await sleep(900);
   check('切换到烽火地带后仍有卡片或空态正常',
     await evl(`document.querySelectorAll('#grid .card').length >= 0`));
-  check('选中的 chip 高亮',
-    await evl(`document.querySelector('#modeFilter .chip[data-val="烽火地带"]').classList.contains('on')`));
+  check('选中的模式卡片高亮',
+    await evl(`document.querySelector('.mode-card[data-val="烽火地带"]').classList.contains('is-on')`));
 
   await evl(`(() => {
     const q = document.getElementById('q');

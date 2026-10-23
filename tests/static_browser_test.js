@@ -100,9 +100,12 @@ const server = http.createServer((req, res) => {
   check('顶部统计来自本地数据',
     await evl(`document.getElementById('metaLine').textContent.includes('条')`),
     await evl(`document.getElementById('metaLine').textContent`));
-  check('筛选按钮已生成',
-    (await evl(`document.querySelectorAll('#modeFilter .chip').length`)) >= 2,
-    String(await evl(`document.querySelectorAll('#modeFilter .chip').length`)));
+  check('模式卡片已生成（全部 + 3 种模式）',
+    (await evl(`document.querySelectorAll('.mode-card').length`)) === 4,
+    String(await evl(`document.querySelectorAll('.mode-card').length`)));
+  check('枪械类型导轨已生成',
+    (await evl(`document.querySelectorAll('.cat-item').length`)) >= 1,
+    String(await evl(`document.querySelectorAll('.cat-item').length`)));
   check('没有连接错误（无 /api 依赖）', errors.length === 0, errors.join(' | '));
 
   console.log();

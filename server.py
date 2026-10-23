@@ -56,11 +56,20 @@ LOGIN_MAX_FAILS = 10                 # 窗口内允许的失败次数
 COOKIE_NAME = "df_admin"
 SESSION_TTL = 7 * 24 * 3600          # 后台登录有效期 7 天
 
+# 枪械类型：与游戏内「全部枪械」筛选栏一致
 GUN_CATEGORIES = [
-    "突击步枪", "战斗步枪", "冲锋枪", "射手步枪",
-    "狙击步枪", "霰弹枪", "轻机枪", "手枪",
+    "步枪", "冲锋枪", "霰弹枪", "轻机枪",
+    "精确射手步枪", "狙击步枪", "手枪", "特殊武器",
 ]
-MODES = ["烽火地带", "全面战场"]
+# 旧分类名 → 新分类名，用于自动迁移历史数据
+LEGACY_CATEGORY = {
+    "突击步枪": "步枪",
+    "战斗步枪": "步枪",
+    "射手步枪": "精确射手步枪",
+}
+
+# 三种模式：与游戏主界面的模式选择一致
+MODES = ["烽火地带", "全面战场", "黑潮爆破"]
 
 
 # ----------------------------------------------------------------------------
@@ -133,22 +142,31 @@ MODE_HINT = {
     "P90冲锋枪": "烽火地带",
 }
 
-# 分类推测：只做前缀匹配兜底，解析结果始终允许人工覆盖
+# 分类推测：按游戏内「全部枪械」的分类口径
+# 顺序很重要：先匹配更长的名称，避免「精确射手步枪」被「步枪」抢走
 CATEGORY_HINTS = [
-    ("突击步枪", "突击步枪"), ("战斗步枪", "战斗步枪"), ("射手步枪", "射手步枪"),
-    ("狙击步枪", "狙击步枪"), ("冲锋枪", "冲锋枪"), ("霰弹枪", "霰弹枪"),
-    ("轻机枪", "轻机枪"), ("机枪", "轻机枪"), ("手枪", "手枪"),
+    ("精确射手步枪", "精确射手步枪"),
+    ("射手步枪", "精确射手步枪"),
+    ("突击步枪", "步枪"),
+    ("战斗步枪", "步枪"),
+    ("机枪", "轻机枪"),
+    ("轻机枪", "轻机枪"),
+    ("冲锋枪", "冲锋枪"),
+    ("霰弹枪", "霰弹枪"),
+    ("狙击步枪", "狙击步枪"),
+    ("狙击枪", "狙击步枪"),
+    ("手枪", "手枪"),
+    ("步枪", "步枪"),
 ]
 
 CJK = re.compile(r"[\u4e00-\u9fff]")
 
 
 def guess_category(name: str) -> str:
-    for suffix, cat in CATEGORY_HINTS:
-        if name.endswith(suffix) or suffix in name:
+    # 长的关键词优先，保证 "精确射手步枪" 不被 "步枪" 截胡
+    for suffix, cat in sorted(CATEGORY_HINTS, key=lambda x: len(x[0]), reverse=True):
+        if suffix in name:
             return cat
-    if CJK.search(name):
-        return "其他"
     return "其他"
 
 
@@ -356,6 +374,7 @@ def init_db():
     try:
         conn.executescript(SCHEMA)
         conn.commit()
+        migrate_categories(conn)
         row = conn.execute("SELECT COUNT(*) AS n FROM codes").fetchone()
         if row["n"] == 0:
             seed(conn)
@@ -364,14 +383,37 @@ def init_db():
     ensure_password()
 
 
+def migrate_categories(conn: sqlite3.Connection):
+    """
+    把旧的枪械分类名迁移到游戏现有口径（突击步枪→步枪 等）。
+    幂等：已经迁移过的数据不会再变。
+    """
+    changed = 0
+    for old, new in LEGACY_CATEGORY.items():
+        cur = conn.execute("UPDATE codes SET category=? WHERE category=?",
+                           (new, old))
+        changed += cur.rowcount
+    # 分类为空或不在当前分类表里的，按枪名重新推测一次
+    rows = conn.execute("SELECT id, gun_name, category FROM codes").fetchall()
+    for r in rows:
+        if r["category"] not in GUN_CATEGORIES:
+            guessed = guess_category(r["gun_name"] or "")
+            if guessed in GUN_CATEGORIES:
+                conn.execute("UPDATE codes SET category=? WHERE id=?",
+                             (guessed, r["id"]))
+                changed += 1
+    if changed:
+        conn.commit()
+
+
 def seed(conn: sqlite3.Connection):
     """首次启动写入几条示例，方便你马上看到效果；正式用之前清掉即可。"""
     samples = [
-        ("腾龙突击步枪-全面战场-6IL87QG013CE082VBOHIS", "腾龙突击步枪", "突击步枪",
+        ("腾龙突击步枪-全面战场-6IL87QG013CE082VBOHIS", "腾龙突击步枪", "步枪",
          "全面战场", "S9", 300000, "30发弹匣,无导气,快攻", "容错率高、机动性拉满，适合快攻突袭", "", 8),
-        ("SCAR-H战斗步枪-5116089223937551183-烽火地带", "SCAR-H战斗步枪", "战斗步枪",
+        ("SCAR-H战斗步枪-5116089223937551183-烽火地带", "SCAR-H战斗步枪", "步枪",
          "烽火地带", "S9", 150000, "稳定,中距离", "中距离压制，后坐力可控", "", 5),
-        ("AUG突击步枪-全面战场-6IL88AC013CE082VBOHIS", "AUG突击步枪", "突击步枪",
+        ("AUG突击步枪-全面战场-6IL88AC013CE082VBOHIS", "AUG突击步枪", "步枪",
          "全面战场", "S9", 220000, "高倍镜,压枪稳", "中距离架点，射击稳定性好", "", 6),
     ]
     ts = now_iso()
@@ -686,11 +728,18 @@ class Handler(SimpleHTTPRequestHandler):
                 seasons = [r["season"] for r in conn.execute(
                     "SELECT DISTINCT season FROM codes WHERE status='published' "
                     "AND season<>'' ORDER BY season DESC")]
+                # 每种枪械类型下有多少条（导轨上的数字）
+                counts = {}
+                for r in conn.execute(
+                        "SELECT category, COUNT(*) n FROM codes "
+                        "WHERE status='published' GROUP BY category"):
+                    counts[r["category"]] = r["n"]
             finally:
                 conn.close()
             return self._send_json({
                 "ok": True, "total": total, "guns": guns, "seasons": seasons,
                 "categories": GUN_CATEGORIES, "modes": MODES,
+                "categoryCounts": counts,
             })
         if path == "/api/admin/session":
             return self._send_json({"ok": True,
