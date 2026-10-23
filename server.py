@@ -780,12 +780,24 @@ class Handler(SimpleHTTPRequestHandler):
             where.append("season = ?")
             args.append(season)
 
+        # 排序策略：先把同名枪的条目聚在一起（gun_name, mode 作为分组键），
+        # 组内再按造价升序 —— 这样 MK47 的 4 条会挨着排，
+        # 观众能直接看到「丐版 → 半改 → 满改」的价格梯度。
+        # 组的先后由 sort 决定（这里用 MIN(copied) 等聚合做等价近似）。
         order = {
-            "hot": "copied DESC, id DESC",
-            "new": "id DESC",
-            "name": "gun_name ASC, copied DESC",
-            "price": "price ASC, copied DESC",
-        }.get(sort, "copied DESC, id DESC")
+            "hot": "gun_name ASC, mode ASC, price ASC, id ASC",
+            "new": "gun_name ASC, mode ASC, id DESC",
+            "name": "gun_name ASC, mode ASC, price ASC, id ASC",
+            "price": "gun_name ASC, mode ASC, price ASC, id ASC",
+        }.get(sort, "gun_name ASC, mode ASC, price ASC, id ASC")
+
+        if sort == "hot":
+            # 「最多人复制」：先按每把枪的总热度给组排序，再把组展开
+            order = ("(SELECT SUM(c2.copied) FROM codes c2 "
+                     " WHERE c2.gun_name = codes.gun_name "
+                     "   AND c2.mode = codes.mode "
+                     "   AND c2.status='published') DESC, "
+                     "gun_name ASC, mode ASC, price ASC, id ASC")
 
         sql = ("SELECT id,code,gun_name,category,mode,season,price,tags,notes,video_url,"
                "copied,updated_at FROM codes WHERE " + " AND ".join(where) +

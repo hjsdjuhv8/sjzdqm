@@ -361,7 +361,7 @@ select:focus { outline: none; border-color: rgba(240,166,60,.5); }
 
 .card-meta {
   display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
-  margin: 10px 0 0; font-size: 12px; color: var(--txt-faint);
+  margin: 0; font-size: 12px; color: var(--txt-faint);
 }
 .card-meta span { display: inline-flex; align-items: center; gap: 4px; }
 .card-meta i {
@@ -369,6 +369,24 @@ select:focus { outline: none; border-color: rgba(240,166,60,.5); }
   background: var(--line); display: inline-block;
 }
 .card-price { color: var(--ok); font-weight: 600; }
+
+/* 版本规格行：同名枪（MK47 有 4 条）靠这里区分 */
+.card-sub {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 0;
+}
+.variant-chip {
+  display: inline-flex; align-items: center;
+  height: 26px; padding: 0 11px;
+  border-radius: 7px;
+  font-size: 13px; font-weight: 800;
+  letter-spacing: .3px;
+  color: #1a1206;
+  background: linear-gradient(180deg, #f5b04a, #d98a24);
+  box-shadow: 0 2px 10px rgba(240,166,60,.22);
+  white-space: nowrap;
+}
 
 /* 枪械类型小图标 */
 .cat-pill {

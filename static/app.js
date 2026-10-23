@@ -166,7 +166,16 @@
       ? '<span class="badge badge-mode-' + esc(it.mode) + '">' + esc(it.mode) + '</span>'
       : '';
 
-    var tags = (it.tags || '').split(/[,，\s]+/).filter(Boolean).slice(0, 6)
+    // 版本规格（丐版/半改/满改/腰射满改…）——同名枪靠它区分，必须最醒目
+    var tagList = (it.tags || '').split(/[,，\s]+/).filter(Boolean);
+    var variant = tagList.length ? tagList[0] : '';
+    var restTags = tagList.slice(1, 7);
+
+    var variantChip = variant
+      ? '<span class="variant-chip">' + esc(variant) + '</span>'
+      : '';
+
+    var tags = restTags
       .map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
 
     var note = it.notes ? '<p class="card-note">' + esc(it.notes) + '</p>' : '';
@@ -179,9 +188,14 @@
           '<h2 class="card-gun">' + esc(it.gun_name || '未命名') + '</h2>' +
           modeBadge +
         '</div>' +
-        (meta.length ? '<div class="card-meta">' + meta.map(function (m, i) {
-          return (i ? '<i></i>' : '') + m;
-        }).join('') + '</div>' : '') +
+        (variantChip || meta.length
+          ? '<div class="card-sub">' +
+              variantChip +
+              (meta.length ? '<div class="card-meta">' + meta.map(function (m, i) {
+                return (i ? '<i></i>' : '') + m;
+              }).join('') + '</div>' : '') +
+            '</div>'
+          : '') +
         '<div class="code-line"><code title="' + esc(it.code) + '">' + esc(it.code) + '</code></div>' +
         note +
         (tags ? '<div class="tags">' + tags + '</div>' : '') +
@@ -251,6 +265,20 @@
       });
   }
 
+  /* 同名枪的条目聚拢：先按枪名成组，组内再按给定规则排序。
+     这样 MK47 的 4 条会挨在一起、按造价从低到高排，
+     观众一眼就能看出「丐版 → 半改 → 满改」的梯度，而不是散落各处。 */
+  function groupByGun(items, innerCmp) {
+    var groups = {}, order = [];
+    items.forEach(function (it) {
+      var key = (it.gun_name || '') + '\u0001' + (it.mode || '');
+      if (!groups[key]) { groups[key] = []; order.push(key); }
+      groups[key].push(it);
+    });
+    order.forEach(function (k) { if (innerCmp) groups[k].sort(innerCmp); });
+    return order.map(function (k) { return groups[k]; });
+  }
+
   // 静态模式下在前端做和服务器一致的过滤/排序/分页
   function filterStatic(data, q, mode, category, season, sort, limit, offset) {
     var items = (data.items || []).slice();
@@ -266,20 +294,36 @@
     if (category) items = items.filter(function (i) { return i.category === category; });
     if (season) items = items.filter(function (i) { return i.season === season; });
 
-    var cmp = {
-      hot: function (a, b) { return (b.copied || 0) - (a.copied || 0); },
-      new: function (a, b) { return (b.id || 0) - (a.id || 0); },
-      name: function (a, b) {
-        return String(a.gun_name).localeCompare(String(b.gun_name), 'zh') ||
-               (b.copied || 0) - (a.copied || 0);
-      },
-      price: function (a, b) { return (a.price || 0) - (b.price || 0) || (b.copied || 0) - (a.copied || 0); }
-    }[sort] || null;
-    if (cmp) items.sort(cmp);
+    var byPrice = function (a, b) {
+      return (a.price || 0) - (b.price || 0) || (a.id || 0) - (b.id || 0);
+    };
+    var byCopied = function (a, b) { return (b.copied || 0) - (a.copied || 0); };
+    var byNew = function (a, b) { return (b.id || 0) - (a.id || 0); };
+    var byName = function (a, b) {
+      return String(a.gun_name).localeCompare(String(b.gun_name), 'zh') || byPrice(a, b);
+    };
+
+    var inner = {
+      hot: byPrice,      // 组内按造价由低到高，方便挑预算档位
+      new: byNew,
+      name: byPrice,
+      price: byPrice
+    }[sort] || byPrice;
+
+    // 组的先后顺序由外部规则决定
+    var groupCmp = {
+      hot: byCopied, new: byNew, name: byName, price: byPrice
+    }[sort] || byCopied;
+
+    var groups = groupByGun(items, inner);
+    groups.sort(function (g1, g2) { return groupCmp(g1[0], g2[0]); });
+
+    var flat = [];
+    groups.forEach(function (g) { flat.push.apply(flat, g); });
 
     return {
-      total: items.length,
-      items: items.slice(offset, offset + limit)
+      total: flat.length,
+      items: flat.slice(offset, offset + limit)
     };
   }
 
