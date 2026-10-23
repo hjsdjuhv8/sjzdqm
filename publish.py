@@ -47,7 +47,11 @@ def export_json():
 
 
 def run(cmd, check=True):
-    r = subprocess.run(cmd, cwd=BASE, capture_output=True, text=True)
+    # 显式指定 utf-8：Windows 默认用 GBK 解码子进程输出，
+    # git 输出里的中文会触发 UnicodeDecodeError（虽然命令其实成功了）。
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", GIT_TERMINAL_PROMPT="0")
+    r = subprocess.run(cmd, cwd=BASE, capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", env=env)
     if check and r.returncode != 0:
         print(f"[X] 命令失败: {' '.join(cmd)}")
         print(r.stdout.strip())
