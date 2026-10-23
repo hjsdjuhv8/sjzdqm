@@ -37,7 +37,10 @@ print("=" * 62)
 # edgeone.json 里写的是 "node build.js"
 cmd = ["node", "build.js"]
 print("  $ " + " ".join(cmd))
-r = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, shell=True)
+# 显式指定 utf-8：Windows 默认用 GBK 解码子进程输出，遇到中文会抛异常
+env = dict(os.environ, PYTHONIOENCODING="utf-8")
+r = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True,
+                   encoding="utf-8", errors="replace", shell=True, env=env)
 print("  exit:", r.returncode)
 for line in (r.stdout or "").strip().splitlines():
     print("  |", line)
