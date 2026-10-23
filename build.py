@@ -26,6 +26,12 @@ OUT = os.path.join(BASE, "public")
 DB_PATH = os.path.join(DATA, "codes.db")
 JSON_PATH = os.path.join(DATA, "codes.json")   # 云端优先用这个
 
+# 与 server.py 的 GUN_CATEGORIES 保持一致
+GUN_CATEGORIES_PY = [
+    "步枪", "冲锋枪", "霰弹枪", "轻机枪",
+    "精确射手步枪", "狙击步枪", "手枪", "特殊武器",
+]
+
 
 def read_from_db():
     if not os.path.exists(DB_PATH):
@@ -54,6 +60,51 @@ def read_from_json():
     return None
 
 
+# 与 server.py / build.js 保持一致的分类口径
+LEGACY_CATEGORY = {
+    "突击步枪": "步枪",
+    "战斗步枪": "步枪",
+    "射手步枪": "精确射手步枪",
+}
+VALID_CATEGORIES = set(GUN_CATEGORIES_PY) | {"其他"}
+
+
+def normalize_categories(items):
+    """
+    把导出物里的旧分类纠正成新口径，并按枪名兜底补全。
+    data/codes.json 是导出文件，可能残留旧分类，构建时统一修正。
+    """
+    migrated = guessed = 0
+    for it in items:
+        cat = it.get("category") or ""
+        if cat in LEGACY_CATEGORY:
+            it["category"] = LEGACY_CATEGORY[cat]
+            migrated += 1
+        elif cat not in VALID_CATEGORIES:
+            new = guess_category(it.get("gun_name") or "")
+            if new != cat:
+                guessed += 1
+            it["category"] = new
+    if migrated or guessed:
+        print(f"[build] 分类归一：迁移旧分类 {migrated} 条，按枪名补全 {guessed} 条")
+    return items
+
+
+def guess_category(name):
+    hints = [
+        ("精确射手步枪", "精确射手步枪"), ("射手步枪", "精确射手步枪"),
+        ("突击步枪", "步枪"), ("战斗步枪", "步枪"),
+        ("轻机枪", "轻机枪"), ("机枪", "轻机枪"),
+        ("冲锋枪", "冲锋枪"), ("霰弹枪", "霰弹枪"),
+        ("狙击步枪", "狙击步枪"), ("狙击枪", "狙击步枪"),
+        ("手枪", "手枪"), ("步枪", "步枪"),
+    ]
+    for kw, cat in sorted(hints, key=lambda x: len(x[0]), reverse=True):
+        if kw in (name or ""):
+            return cat
+    return "其他"
+
+
 def main():
     # 优先级：data/codes.json > data/codes.db
     # 优先用 JSON，是为了保证「构建结果 === 你提交到 GitHub 的那份数据」，
@@ -69,6 +120,7 @@ def main():
         print("        将生成一个空数据的站点。请在本地先导出数据。")
         items = []
 
+    items = normalize_categories(items)
     print(f"[build] 数据来源: {source}  条目数: {len(items)}")
 
     if os.path.exists(OUT):

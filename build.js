@@ -22,13 +22,77 @@ const STATIC = path.join(BASE, 'static');
 const DATA = path.join(BASE, 'data');
 const OUT = path.join(BASE, 'public');
 
+// 旧分类 → 新分类。data/codes.json 是导出物，可能残留旧口径，
+// 构建时统一纠正一次，避免线上出现「突击步枪」这种已废弃的分类。
+const LEGACY_CATEGORY = {
+  '突击步枪': '步枪',
+  '战斗步枪': '步枪',
+  '射手步枪': '精确射手步枪',
+};
+
+// 按枪名兜底推断（与 server.py 的 guess_category 保持一致）
+const CATEGORY_HINTS = [
+  ['精确射手步枪', '精确射手步枪'],
+  ['射手步枪', '精确射手步枪'],
+  ['突击步枪', '步枪'],
+  ['战斗步枪', '步枪'],
+  ['轻机枪', '轻机枪'],
+  ['机枪', '轻机枪'],
+  ['冲锋枪', '冲锋枪'],
+  ['霰弹枪', '霰弹枪'],
+  ['狙击步枪', '狙击步枪'],
+  ['狙击枪', '狙击步枪'],
+  ['手枪', '手枪'],
+  ['步枪', '步枪'],
+];
+
+const VALID_CATEGORIES = new Set([
+  '步枪', '冲锋枪', '霰弹枪', '轻机枪',
+  '精确射手步枪', '狙击步枪', '手枪', '特殊武器', '其他',
+]);
+
+function guessCategory(name) {
+  const n = String(name || '');
+  const sorted = CATEGORY_HINTS.slice().sort((a, b) => b[0].length - a[0].length);
+  for (const [kw, cat] of sorted) {
+    if (n.indexOf(kw) >= 0) return cat;
+  }
+  return '其他';
+}
+
+function normalizeItems(items) {
+  const fixed = { migrated: 0, guessed: 0 };
+  return {
+    fixed,
+    items: items.map((it) => {
+      const copy = Object.assign({}, it);
+      let cat = copy.category || '';
+      if (LEGACY_CATEGORY[cat]) {
+        cat = LEGACY_CATEGORY[cat];
+        fixed.migrated += 1;
+      }
+      if (!VALID_CATEGORIES.has(cat)) {
+        const guessed = guessCategory(copy.gun_name);
+        if (guessed !== cat) fixed.guessed += 1;
+        cat = guessed;
+      }
+      copy.category = cat;
+      return copy;
+    }),
+  };
+}
+
 function readItems() {
   // 优先 codes.json：保证构建结果 === 仓库里提交的那份数据
   const jsonPath = path.join(DATA, 'codes.json');
   if (fs.existsSync(jsonPath)) {
     const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
     const items = Array.isArray(raw) ? raw : (raw.items || []);
-    return { items, source: 'data/codes.json' };
+    const { items: normalized, fixed } = normalizeItems(items);
+    if (fixed.migrated || fixed.guessed) {
+      console.log(`[build] 分类归一：迁移旧分类 ${fixed.migrated} 条，按枪名补全 ${fixed.guessed} 条`);
+    }
+    return { items: normalized, source: 'data/codes.json' };
   }
   return { items: [], source: '(无数据)' };
 }
