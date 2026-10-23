@@ -53,6 +53,32 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /* 价格统一用「万」显示与录入。
+     数据库里存的是原始游戏币（940000），
+     界面显示 94，保存时再乘 10000 还原。
+     兼容：如果用户直接输 940000 这种完整数字，也能正确识别。 */
+  function fmtPrice(v) {
+    var n = Number(v) || 0;
+    if (n <= 0) return '';
+    if (n >= 10000) {
+      var w = n / 10000;
+      var s = w.toFixed(w % 1 === 0 ? 0 : 1);
+      return s;
+    }
+    return String(n);
+  }
+
+  // 把用户输入的「万」换算回原始值
+  function parsePrice(s) {
+    var t = String(s == null ? '' : s).trim();
+    if (!t) return 0;
+    t = t.replace(/[,\s]/g, '').replace(/万$/, '');
+    var n = parseFloat(t);
+    if (!isFinite(n) || n <= 0) return 0;
+    // 小于 1000 视为「万」单位（940 → 940万 这个量级不可能，所以 94 就是 94万）
+    return n < 1000 ? Math.round(n * 10000) : Math.round(n);
+  }
+
   // 当前访问的主机，用于「服务连不上」时给出准确提示
   var BASE_HINT = location.host || '127.0.0.1:8000';
 
@@ -326,8 +352,9 @@
         '<td><select data-f="category">' + catOpts + '</select></td>' +
         '<td><select data-f="mode">' + modeOpts + '</select></td>' +
         '<td><input data-f="season" value="' + esc(r.season) + '" maxlength="12"></td>' +
-        '<td><input data-f="price" type="number" min="0" step="1000" value="' +
-            (r.price || 0) + '"></td>' +
+        '<td><input data-f="price" type="text" inputmode="decimal" ' +
+            'class="price-input" title="以万为单位，例如 94 表示 94万；也可直接填 940000" ' +
+            'value="' + fmtPrice(r.price) + '"></td>' +
         '<td><input data-f="tags" value="' + esc(r.tags) + '"></td>' +
         '<td class="cell-code" title="' + esc(r.code) + '">' + esc(r.code) + '</td>' +
         '<td class="cell-num">' + (r.copied || 0) + '</td>' +
@@ -356,7 +383,12 @@
       var code = tr.dataset.code;
       var payload = { code: code };
       Array.prototype.forEach.call(inputs, function (inp) {
-        payload[camel(inp.dataset.f)] = inp.value;
+        // 价格输入的是「万」，保存前换算回原始值
+        if (inp.dataset.f === 'price') {
+          payload.price = parsePrice(inp.value);
+        } else {
+          payload[camel(inp.dataset.f)] = inp.value;
+        }
       });
       api('/api/admin/save', {
         method: 'POST', body: JSON.stringify(payload)
@@ -364,6 +396,9 @@
         if (!d.ok) { toast(d.error || '保存失败', true); return; }
         tr.classList.remove('dirty');
         toast('已保存');
+        // 回填规范化后的显示值（比如输入 94.5 → 94.5）
+        var pi = tr.querySelector('[data-f="price"]');
+        if (pi) pi.value = fmtPrice(payload.price);
       }).catch(function () {});
     });
 

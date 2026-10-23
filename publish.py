@@ -24,6 +24,15 @@ JSON_OUT = os.path.join(BASE, "data", "codes.json")
 FIELDS = ("id,code,gun_name,category,mode,season,price,tags,notes,"
           "video_url,copied,updated_at")
 
+# 自动化测试会往库里写带这些标记的假数据。
+# 导出时过滤掉，避免观众复制到无效的改枪码；数据库本身不做改动。
+TEST_MARKERS = ("UITEST", "TESTCODE", "-T768619")
+
+
+def is_test_residue(code: str) -> bool:
+    c = code or ""
+    return any(m in c for m in TEST_MARKERS)
+
 
 def export_json():
     if not os.path.exists(DB):
@@ -37,7 +46,17 @@ def export_json():
             f"ORDER BY copied DESC, id DESC").fetchall()
     finally:
         conn.close()
-    items = [dict(r) for r in rows]
+
+    items, skipped = [], 0
+    for r in rows:
+        if is_test_residue(r["code"]):
+            skipped += 1
+            continue
+        items.append(dict(r))
+
+    if skipped:
+        print(f"[i] 已跳过 {skipped} 条测试残留数据（不影响数据库本身）")
+
     payload = {"ok": True, "total": len(items), "items": items}
     os.makedirs(os.path.dirname(JSON_OUT), exist_ok=True)
     with open(JSON_OUT, "w", encoding="utf-8") as f:

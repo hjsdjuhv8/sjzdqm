@@ -3,6 +3,20 @@
  "total": 36,
  "items": [
   {
+   "id": 11,
+   "code": "6LFFCAK0DS9LTKRUMTH9C",
+   "gun_name": "MK47突击步枪",
+   "category": "步枪",
+   "mode": "烽火地带",
+   "season": "s11",
+   "price": 540000,
+   "tags": "半改",
+   "notes": "",
+   "video_url": "",
+   "copied": 4,
+   "updated_at": "2026-10-23T15:35:10Z"
+  },
+  {
    "id": 14,
    "code": "6LFFCHS0DS9LTKRUMTH9C",
    "gun_name": "MK47突击步枪",
@@ -28,7 +42,7 @@
    "notes": "",
    "video_url": "",
    "copied": 0,
-   "updated_at": "2026-10-23T14:55:11Z"
+   "updated_at": "2026-10-23T15:34:51Z"
   },
   {
    "id": 58,
@@ -491,20 +505,6 @@
    "video_url": "",
    "copied": 0,
    "updated_at": "2026-10-23T03:27:59Z"
-  },
-  {
-   "id": 11,
-   "code": "6LFFCAK0DS9LTKRUMTH9C",
-   "gun_name": "MK47突击步枪",
-   "category": "步枪",
-   "mode": "烽火地带",
-   "season": "s11",
-   "price": 540000,
-   "tags": "半改",
-   "notes": "",
-   "video_url": "",
-   "copied": 0,
-   "updated_at": "2026-10-23T03:27:30Z"
   }
  ]
 }

@@ -53,10 +53,16 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /* 价格统一以「万」为单位显示：940000 → 94万，1020000 → 102万 */
   function money(n) {
     n = Number(n) || 0;
     if (n <= 0) return '';
-    if (n >= 10000) return (n / 10000).toFixed(n % 10000 === 0 ? 0 : 1) + '万';
+    if (n >= 10000) {
+      var w = n / 10000;
+      // 整数就去掉小数位；带小数的保留一位（如 102.5万）
+      var s = (w % 1 === 0) ? String(Math.round(w)) : w.toFixed(1);
+      return s + '万';
+    }
     return String(n);
   }
 

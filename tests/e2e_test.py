@@ -237,6 +237,28 @@ check("导出行包含枪名与码", any("-" in l for l in lines), text[:200])
 
 print()
 print("=" * 66)
+print("10. 清理测试数据（不污染真实数据库）")
+print("=" * 66)
+# 测试往真实库里写过带 RUN_TAG 的条目，结束时删干净。
+# 注意：其中一条已在「删除功能」测试里被删掉，所以这里允许它返回 404。
+cleaned = 0
+already_gone = 0
+for r in rows:
+    st, _ = req("/api/admin/delete", {"code": r["code"]})
+    if st == 200:
+        cleaned += 1
+    elif st == 404:
+        already_gone += 1
+print(f"  已清理 {cleaned} 条，{already_gone} 条此前已被删除（标记 -T{RUN_TAG}）")
+check("测试数据已清理", cleaned + already_gone == len(rows),
+      f"cleaned={cleaned} gone={already_gone} total={len(rows)}")
+
+# 再确认库里确实没有残留
+st, d = req("/api/codes?q=" + urllib.parse.quote("-T" + RUN_TAG))
+check("库中无本次测试残留", d.get("total", -1) == 0, str(d.get("total")))
+
+print()
+print("=" * 66)
 if FAILS:
     print(f"失败 {len(FAILS)} 项：")
     for f in FAILS:

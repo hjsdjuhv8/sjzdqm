@@ -12,7 +12,8 @@ const path = require('path');
 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const BASE = process.argv[2] || 'http://127.0.0.1:8126';
-const PW = fs.readFileSync('D:\\z1383\\deepseak\\deltaforce-codes\\data\\.admin-password', 'utf8').trim();
+const WD = 'D:\\z1383\\deepseak\\deltaforce-codes';
+const PW = fs.readFileSync(path.join(WD, 'data', '.admin-password'), 'utf8').trim();
 
 const fails = [];
 const check = (name, cond, detail) => {
@@ -269,7 +270,36 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   console.log();
   console.log('='.repeat(66));
-  console.log('5. JS 运行时错误检查');
+  console.log('5. 清理测试数据（不污染真实数据库）');
+  console.log('='.repeat(66));
+  // 直接用 sqlite 删除本次写入的 UITEST 条目。
+  // 走 HTTP 接口不可靠：页面可能已切到「空状态」，或会话过期返回 401。
+  const { execFileSync } = require('child_process');
+  const pyBin = process.env.DF_PYTHON ||
+    'C:\\Users\\z1383\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe';
+  const cleanupScript = path.join(os.tmpdir(), `df_cleanup_${tag}.py`);
+  let cleanupOk = false;
+  try {
+    const dbPath = path.join(WD, 'data', 'codes.db');
+    fs.writeFileSync(cleanupScript,
+      `# -*- coding: utf-8 -*-\n` +
+      `import sqlite3\n` +
+      `c = sqlite3.connect(${JSON.stringify(dbPath)})\n` +
+      `n = c.execute("DELETE FROM codes WHERE code LIKE ?", ('%UITEST${tag}%',)).rowcount\n` +
+      `c.commit()\n` +
+      `c.close()\n` +
+      `print("DELETED", n)\n`, 'utf8');
+    const out = String(execFileSync(pyBin, [cleanupScript], { encoding: 'utf8' }));
+    cleanupOk = /DELETED/.test(out);
+    console.log('  ' + out.trim());
+  } catch (e) {
+    console.log('  清理失败:', e.message);
+  }
+  check('测试写入的数据已清理', cleanupOk);
+
+  console.log();
+  console.log('='.repeat(66));
+  console.log('6. JS 运行时错误检查');
   console.log('='.repeat(66));
   const realErrors = pageErrors.filter((e) => e && !/favicon/i.test(e));
   check('没有未捕获的 JS 异常', realErrors.length === 0, realErrors.join(' | '));
