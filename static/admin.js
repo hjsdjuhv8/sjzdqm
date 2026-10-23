@@ -53,6 +53,9 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // 当前访问的主机，用于「服务连不上」时给出准确提示
+  var BASE_HINT = location.host || '127.0.0.1:8000';
+
   function api(path, opts) {
     opts = opts || {};
     opts.headers = Object.assign(
@@ -61,11 +64,21 @@
       return r.json().catch(function () { return { ok: false, error: 'HTTP ' + r.status }; })
         .then(function (data) {
           if (r.status === 401 && !opts.noAuthRedirect) {
+            // 会话过期：切回登录页，并让调用方知道「不是业务失败」
             showLogin();
-            throw new Error('登录已过期');
+            var err = new Error(data && data.error ? data.error : '登录已过期，请重新登录');
+            err.code = 401;
+            throw err;
           }
           return data;
         });
+    }, function () {
+      // fetch 本身失败 = 服务没起来 / 端口不对 / 网络断。
+      // 这和「解析失败」是两回事，必须分开报，否则用户根本查不出原因。
+      var err = new Error('无法连接后台服务（' + BASE_HINT + '）。' +
+                          '请确认 start.bat 的窗口还开着。');
+      err.code = 'NETWORK';
+      throw err;
     });
   }
 
@@ -96,8 +109,10 @@
         el.loginErr.textContent = d.error || '登录失败';
         el.loginErr.hidden = false;
       }
-    }).catch(function () {
-      el.loginErr.textContent = '网络错误';
+    }).catch(function (e) {
+      el.loginErr.textContent = (e && e.code === 'NETWORK')
+        ? e.message
+        : '网络错误';
       el.loginErr.hidden = false;
     });
   });
@@ -186,9 +201,15 @@
         ? '有 ' + bad + ' 行没识别出码，可忽略或手动处理'
         : '全部识别成功';
       el.importMsg.className = 'micro' + (bad ? ' warn' : '');
-    }).catch(function () {
+    }).catch(function (e) {
       el.parseBtn.disabled = false;
-      toast('解析失败', true);
+      if (e && e.code === 401) {
+        toast('登录已过期，请重新登录后再解析', true);
+      } else if (e && e.code === 'NETWORK') {
+        toast(e.message, true);
+      } else {
+        toast('解析失败：' + (e && e.message ? e.message : '网络异常'), true);
+      }
     });
   });
 
@@ -256,10 +277,16 @@
       el.importBtn.disabled = true;
       el.fillGunBtn.hidden = true;
       el.pasteArea.value = '';
-    }).catch(function () {
+    }).catch(function (e) {
       el.importBtn.disabled = false;
       el.importBtn.textContent = '确认导入';
-      toast('导入失败', true);
+      if (e && e.code === 401) {
+        toast('登录已过期，请重新登录后再导入', true);
+      } else if (e && e.code === 'NETWORK') {
+        toast(e.message, true);
+      } else {
+        toast('导入失败：' + (e && e.message ? e.message : '网络异常'), true);
+      }
     });
   });
 

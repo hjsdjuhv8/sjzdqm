@@ -330,6 +330,11 @@ CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token   TEXT PRIMARY KEY,
+    expires INTEGER NOT NULL
+);
 """
 
 
@@ -405,38 +410,68 @@ def read_password() -> str:
 
 
 # ----------------------------------------------------------------------------
-# 会话与限流（内存即可，重启后需重新登录，可接受）
+# 会话与限流
 # ----------------------------------------------------------------------------
+# 会话持久化到数据库：否则服务一重启（双击 start.bat 每次都会重启）
+# 你就得重新登录一次，而且在「已登录」界面上点按钮会突然报错。
+# 限流计数放内存无所谓，重启清零可以接受。
 
-_sessions = {}      # token -> 过期时间戳
-_login_fails = {}   # ip -> [时间戳...]
+_login_fails = {}   # ip -> [时间戳...]  仅登录限流用，重启清零可接受
 
 
 def make_session() -> str:
     token = secrets.token_urlsafe(32)
-    _sessions[token] = time.time() + SESSION_TTL
+    exp = int(time.time() + SESSION_TTL)
+    conn = db_connect()
+    try:
+        conn.execute("DELETE FROM sessions WHERE expires < ?", (int(time.time()),))
+        conn.execute("INSERT INTO sessions (token, expires) VALUES (?,?)", (token, exp))
+        conn.commit()
+    finally:
+        conn.close()
     return token
 
 
 def session_valid(token: str) -> bool:
     if not token:
         return False
-    exp = _sessions.get(token)
-    if not exp:
-        return False
-    if exp < time.time():
-        _sessions.pop(token, None)
-        return False
-    return True
+    conn = db_connect()
+    try:
+        row = conn.execute("SELECT expires FROM sessions WHERE token = ?",
+                           (token,)).fetchone()
+        if not row:
+            return False
+        if row["expires"] < time.time():
+            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+            conn.commit()
+            return False
+        return True
+    finally:
+        conn.close()
+
+
+def drop_session(token: str):
+    if not token:
+        return
+    conn = db_connect()
+    try:
+        conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def prune_sessions():
     t = time.time()
-    for k in [k for k, v in _sessions.items() if v < t]:
-        _sessions.pop(k, None)
     for ip in [ip for ip, hits in _login_fails.items()
                if not hits or hits[-1] < t - LOGIN_WINDOW]:
         _login_fails.pop(ip, None)
+    conn = db_connect()
+    try:
+        conn.execute("DELETE FROM sessions WHERE expires < ?", (int(t),))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def login_blocked(ip: str) -> bool:
@@ -863,8 +898,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _api_admin_post(self, path):
         if path == "/api/admin/logout":
-            tok = self._cookie_token()
-            _sessions.pop(tok, None)
+            drop_session(self._cookie_token())
             return self._send_json(
                 {"ok": True},
                 extra_headers={"Set-Cookie": f"{COOKIE_NAME}=; Path=/; Max-Age=0"})
