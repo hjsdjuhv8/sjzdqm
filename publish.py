@@ -80,31 +80,42 @@ def run(cmd, check=True):
 
 
 def publish(message):
+    """返回 (成功与否, 状态)。状态用于给一键脚本准确提示。"""
     ok, r = run(["git", "rev-parse", "--is-inside-work-tree"], check=False)
     if not ok or "true" not in r.stdout:
         print("[X] 当前目录不是 git 仓库。先执行：")
-        print("    git init && git add . && git commit -m 'init'")
-        return False
+        print("    git init && git add -A && git commit -m 'init'")
+        return False, "not_repo"
 
     run(["git", "add", "data/codes.json"])
 
     ok, r = run(["git", "diff", "--cached", "--quiet"], check=False)
     if ok and r.returncode == 0:
         print("[i] data/codes.json 没有变化，无需提交。")
-        return True
+        return True, "no_change"
 
     ok, _ = run(["git", "commit", "-m", message])
     if not ok:
-        return False
+        return False, "commit_failed"
     print(f"[√] 已提交: {message}")
 
     ok, r = run(["git", "push"], check=False)
     if not ok:
+        err = (r.stderr or "") + (r.stdout or "")
+        if "could not resolve host" in err.lower() or "failed to connect" in err.lower():
+            print("[!] 连不上 github.com —— 网络问题，稍后重试即可。")
+            print("    你的本地数据库没有被改动，重试不会重复导入。")
+            return False, "network"
+        if "authentication" in err.lower() or "permission denied" in err.lower():
+            print("[!] GitHub 认证失败。在终端手动执行一次：")
+            print("    git push origin main")
+            print("    （会弹出浏览器登录，登录一次后续就不用了）")
+            return False, "auth"
         print("[!] push 失败，检查是否已设置 remote：")
         print("    git remote add origin https://github.com/你的用户名/仓库.git")
-        return False
+        return False, "push_failed"
     print("[√] 已推送。EdgeOne 会自动重新构建（通常 1~2 分钟）。")
-    return True
+    return True, "pushed"
 
 
 def main():
@@ -120,7 +131,11 @@ def main():
     if args.no_push:
         print("[i] 跳过 git 操作（--no-push）")
         return 0
-    return 0 if publish(args.message) else 1
+
+    ok, status = publish(args.message)
+    # 让一键脚本能区分「真的推上去了」和「没有变化」
+    print(f"PUBLISH_STATUS={status}")
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
