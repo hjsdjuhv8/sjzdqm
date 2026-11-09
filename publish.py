@@ -21,8 +21,8 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(BASE, "data", "codes.db")
 JSON_OUT = os.path.join(BASE, "data", "codes.json")
 
-FIELDS = ("id,code,gun_name,category,mode,season,price,tags,notes,"
-          "video_url,copied,updated_at")
+FIELDS = ("id,code,gun_name,category,mode,season,price,price_tier,variant,"
+          "tags,notes,video_url,copied,updated_at")
 
 # 自动化测试会往库里写带这些标记的假数据。
 # 导出时过滤掉，避免观众复制到无效的改枪码；数据库本身不做改动。

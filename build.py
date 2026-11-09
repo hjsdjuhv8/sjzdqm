@@ -40,8 +40,8 @@ def read_from_db():
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute(
-            "SELECT id,code,gun_name,category,mode,season,price,tags,notes,"
-            "video_url,copied,updated_at FROM codes "
+            "SELECT id,code,gun_name,category,mode,season,price,price_tier,variant,"
+            "tags,notes,video_url,copied,updated_at FROM codes "
             "WHERE status='published' ORDER BY copied DESC, id DESC").fetchall()
     finally:
         conn.close()
