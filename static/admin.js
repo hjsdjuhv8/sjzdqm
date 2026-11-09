@@ -7,6 +7,23 @@
   var CATS = ['步枪', '冲锋枪', '霰弹枪', '轻机枪', '精确射手步枪',
               '狙击步枪', '手枪', '特殊武器', '其他'];
   var MODES = ['烽火地带', '全面战场', '黑潮爆破'];
+  var VARIANTS = ['丐版', '半改', '满改'];
+
+  // 造价档位。后端也会返回一份，这里保留兜底，离线也能用。
+  var PRICE_TIERS = [
+    { value: '20-30', label: '20-30万', min: 200000 },
+    { value: '30-40', label: '30-40万', min: 300000 },
+    { value: '40-50', label: '40-50万', min: 400000 },
+    { value: '50-60', label: '50-60万', min: 500000 },
+    { value: '60-70', label: '60-70万', min: 600000 },
+    { value: '70-80', label: '70-80万', min: 700000 },
+    { value: '80-90', label: '80-90万', min: 800000 },
+    { value: '90-100', label: '90-100万', min: 900000 },
+    { value: '100+', label: '100万以上', min: 1000000 }
+  ];
+
+  var dVariant = '';       // 导入时套用的配装档位
+  var priceTiers = PRICE_TIERS.slice();
 
   var previewRows = [];
   var adminRows = [];
@@ -24,6 +41,9 @@
     dCategory: document.getElementById('dCategory'),
     dSeason: document.getElementById('dSeason'),
     dCommit: document.getElementById('dCommit'),
+    dVariant: document.getElementById('dVariant'),
+    dPriceTier: document.getElementById('dPriceTier'),
+    dNotes: document.getElementById('dNotes'),
     parseBtn: document.getElementById('parseBtn'),
     importBtn: document.getElementById('importBtn'),
     clearBtn: document.getElementById('clearBtn'),
@@ -153,8 +173,42 @@
     return {
       mode: el.dMode.value,
       category: el.dCategory.value,
-      season: el.dSeason.value.trim()
+      season: el.dSeason.value.trim(),
+      variant: dVariant,
+      priceTier: el.dPriceTier ? el.dPriceTier.value : ''
     };
+  }
+
+  /* 配装档位：三选一按钮 */
+  function bindVariantPicker() {
+    if (!el.dVariant) return;
+    el.dVariant.addEventListener('click', function (e) {
+      var btn = e.target.closest('.variant-btn');
+      if (!btn) return;
+      dVariant = btn.dataset.val || '';
+      Array.prototype.forEach.call(
+        el.dVariant.querySelectorAll('.variant-btn'),
+        function (b) { b.classList.toggle('on', b === btn); });
+    });
+  }
+
+  /* 造价档位下拉 */
+  function fillPriceTiers(tiers) {
+    if (!el.dPriceTier) return;
+    var list = (tiers && tiers.length) ? tiers : PRICE_TIERS;
+    priceTiers = list;
+    var html = '<option value="">不指定</option>';
+    list.forEach(function (t) {
+      html += '<option value="' + esc(t.value) + '">' + esc(t.label) + '</option>';
+    });
+    el.dPriceTier.innerHTML = html;
+  }
+
+  function tierLabel(v) {
+    for (var i = 0; i < priceTiers.length; i++) {
+      if (priceTiers[i].value === v) return priceTiers[i].label;
+    }
+    return '';
   }
 
   function renderPreview(items) {
@@ -276,8 +330,11 @@
       rows: rows.map(function (it) {
         return {
           code: it.code, gunName: it.gunName, mode: it.mode || '',
-          category: '', season: defaults().season, tags: '', notes: '',
-          price: 0, videoUrl: ''
+          category: '', season: defaults().season,
+          tags: '', notes: (el.dNotes ? el.dNotes.value.trim() : ''),
+          price: 0, videoUrl: '',
+          variant: dVariant,
+          priceTier: (el.dPriceTier ? el.dPriceTier.value : '')
         };
       }),
       defaults: defaults()
@@ -347,15 +404,28 @@
         return '<option' + (m === r.mode ? ' selected' : '') + '>' + m + '</option>';
       })).join('');
 
+      // 配装档位：三选一，用按钮组而不是下拉，点起来更快
+      var variantBtns = VARIANTS.map(function (v) {
+        var on = (r.variant === v) ? ' on' : '';
+        return '<button type="button" class="variant-btn sm' + on +
+               '" data-f="variant" data-val="' + esc(v) + '">' + esc(v) + '</button>';
+      }).join('');
+
+      // 造价档位下拉
+      var tierOpts = '<option value="">—</option>' + priceTiers.map(function (t) {
+        var sel = (r.price_tier === t.value) ? ' selected' : '';
+        return '<option value="' + esc(t.value) + '"' + sel + '>' +
+               esc(t.label) + '</option>';
+      }).join('');
+
       return '<tr data-code="' + esc(r.code) + '">' +
         '<td><input data-f="gun_name" value="' + esc(r.gun_name) + '"></td>' +
         '<td><select data-f="category">' + catOpts + '</select></td>' +
         '<td><select data-f="mode">' + modeOpts + '</select></td>' +
         '<td><input data-f="season" value="' + esc(r.season) + '" maxlength="12"></td>' +
-        '<td><input data-f="price" type="text" inputmode="decimal" ' +
-            'class="price-input" title="以万为单位，例如 94 表示 94万；也可直接填 940000" ' +
-            'value="' + fmtPrice(r.price) + '"></td>' +
-        '<td><input data-f="tags" value="' + esc(r.tags) + '"></td>' +
+        '<td><div class="variant-picker sm" data-group="variant">' + variantBtns + '</div></td>' +
+        '<td><select data-f="price_tier">' + tierOpts + '</select></td>' +
+        '<td><input data-f="notes" value="' + esc(r.notes) + '" placeholder="提示文字"></td>' +
         '<td class="cell-code" title="' + esc(r.code) + '">' + esc(r.code) + '</td>' +
         '<td class="cell-num">' + (r.copied || 0) + '</td>' +
         '<td><select data-f="status">' +
@@ -375,30 +445,50 @@
   function wireRow(tr) {
     var inputs = tr.querySelectorAll('[data-f]');
     Array.prototype.forEach.call(inputs, function (inp) {
+      if (inp.tagName === 'BUTTON') return;   // 按钮组单独处理
       inp.addEventListener('input', function () { tr.classList.add('dirty'); });
       inp.addEventListener('change', function () { tr.classList.add('dirty'); });
     });
 
+    // 行内的配装档位按钮组：点一下选中，再点同一取消
+    Array.prototype.forEach.call(
+      tr.querySelectorAll('[data-group="variant"]'),
+      function (group) {
+        group.addEventListener('click', function (e) {
+          var btn = e.target.closest('.variant-btn');
+          if (!btn) return;
+          var wasOn = btn.classList.contains('on');
+          Array.prototype.forEach.call(
+            group.querySelectorAll('.variant-btn'),
+            function (b) { b.classList.remove('on'); });
+          if (!wasOn) btn.classList.add('on');
+          tr.classList.add('dirty');
+        });
+      });
+
     tr.querySelector('.mini-btn.save').addEventListener('click', function () {
       var code = tr.dataset.code;
       var payload = { code: code };
+
       Array.prototype.forEach.call(inputs, function (inp) {
-        // 价格输入的是「万」，保存前换算回原始值
-        if (inp.dataset.f === 'price') {
-          payload.price = parsePrice(inp.value);
+        if (inp.tagName === 'BUTTON') return;
+        if (inp.dataset.f === 'price_tier') {
+          payload.priceTier = inp.value;
         } else {
           payload[camel(inp.dataset.f)] = inp.value;
         }
       });
+
+      // 收集本行选中的配装档位
+      var onBtn = tr.querySelector('[data-group="variant"] .variant-btn.on');
+      payload.variant = onBtn ? onBtn.dataset.val : '';
+
       api('/api/admin/save', {
         method: 'POST', body: JSON.stringify(payload)
       }).then(function (d) {
         if (!d.ok) { toast(d.error || '保存失败', true); return; }
         tr.classList.remove('dirty');
         toast('已保存');
-        // 回填规范化后的显示值（比如输入 94.5 → 94.5）
-        var pi = tr.querySelector('[data-f="price"]');
-        if (pi) pi.value = fmtPrice(payload.price);
       }).catch(function () {});
     });
 
@@ -428,6 +518,16 @@
   });
 
   /* ------------------------------------------------------------ 启动 */
+
+  bindVariantPicker();
+  fillPriceTiers(PRICE_TIERS);
+
+  // 从后端拿档位定义（保证前后端一致）
+  fetch('/api/meta').then(function (r) { return r.json(); }).then(function (d) {
+    if (d && d.ok && d.priceTiers && d.priceTiers.length) {
+      fillPriceTiers(d.priceTiers);
+    }
+  }).catch(function () {});
 
   api('/api/admin/session', { noAuthRedirect: true }).then(function (d) {
     if (d && d.loggedIn) showAdmin();

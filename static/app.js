@@ -12,6 +12,26 @@
   var CAT_ORDER = ['步枪', '冲锋枪', '霰弹枪', '轻机枪',
                    '精确射手步枪', '狙击步枪', '手枪', '特殊武器'];
 
+  // 造价档位（后端会喂一份，这里兜底）
+  var PRICE_TIERS = [
+    { value: '20-30', label: '20-30万' },
+    { value: '30-40', label: '30-40万' },
+    { value: '40-50', label: '40-50万' },
+    { value: '50-60', label: '50-60万' },
+    { value: '60-70', label: '60-70万' },
+    { value: '70-80', label: '70-80万' },
+    { value: '80-90', label: '80-90万' },
+    { value: '90-100', label: '90-100万' },
+    { value: '100+', label: '100万以上' }
+  ];
+
+  function tierLabel(v) {
+    for (var i = 0; i < PRICE_TIERS.length; i++) {
+      if (PRICE_TIERS[i].value === v) return PRICE_TIERS[i].label;
+    }
+    return v || '';
+  }
+
   var state = {
     q: '', mode: '', category: '', season: '', sort: 'hot',
     offset: 0, total: 0, loading: false, items: []
@@ -159,7 +179,10 @@
 
   function cardHTML(it) {
     var meta = [];
-    if (it.price > 0) {
+    // 造价：优先显示档位（20-30万），没有档位才显示具体数字
+    if (it.price_tier) {
+      meta.push('<span class="card-price">造价 ' + esc(tierLabel(it.price_tier)) + '</span>');
+    } else if (it.price > 0) {
       meta.push('<span class="card-price">造价 ' + esc(money(it.price)) + '</span>');
     }
     if (it.season) meta.push('<span>' + esc(it.season) + '</span>');
@@ -172,10 +195,11 @@
       ? '<span class="badge badge-mode-' + esc(it.mode) + '">' + esc(it.mode) + '</span>'
       : '';
 
-    // 版本规格（丐版/半改/满改/腰射满改…）——同名枪靠它区分，必须最醒目
+    // 配装档位：优先用 variant 字段（丐版/半改/满改），
+    // 老数据没有这个字段时退回用第一个标签
     var tagList = (it.tags || '').split(/[,，\s]+/).filter(Boolean);
-    var variant = tagList.length ? tagList[0] : '';
-    var restTags = tagList.slice(1, 7);
+    var variant = it.variant || (tagList.length ? tagList[0] : '');
+    var restTags = it.variant ? tagList.slice(0, 6) : tagList.slice(1, 7);
 
     var variantChip = variant
       ? '<span class="variant-chip">' + esc(variant) + '</span>'
@@ -292,7 +316,8 @@
 
     if (ql) {
       items = items.filter(function (i) {
-        return [i.gun_name, i.tags, i.notes, i.code, i.category]
+        return [i.gun_name, i.tags, i.notes, i.code, i.category,
+                i.variant, i.price_tier, tierLabel(i.price_tier)]
           .some(function (f) { return String(f || '').toLowerCase().indexOf(ql) >= 0; });
       });
     }
@@ -473,6 +498,11 @@
     el.metaLine.innerHTML = '已收录 <b>' + d.total + '</b> 条改枪码';
     if (el.heroStat) {
       el.heroStat.textContent = '已收录 ' + d.total + ' 条改枪码 · 持续更新';
+    }
+
+    // 后端有档位定义就用后端的，保证前后端一致
+    if (d.priceTiers && d.priceTiers.length) {
+      PRICE_TIERS = d.priceTiers;
     }
 
     // 分类：只用数据库里真实存在的类型，避免一排空按钮

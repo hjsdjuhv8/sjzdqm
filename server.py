@@ -71,6 +71,42 @@ LEGACY_CATEGORY = {
 # 三种模式：与游戏主界面的模式选择一致
 MODES = ["烽火地带", "全面战场", "黑潮爆破"]
 
+# 配装档位：后台录入时三选一
+VARIANTS = ["丐版", "半改", "满改"]
+
+# 造价档位：后台录入时单选。value 是存储值，label 是显示文字。
+PRICE_TIERS = [
+    {"value": "20-30", "label": "20-30万", "min": 200000, "max": 300000},
+    {"value": "30-40", "label": "30-40万", "min": 300000, "max": 400000},
+    {"value": "40-50", "label": "40-50万", "min": 400000, "max": 500000},
+    {"value": "50-60", "label": "50-60万", "min": 500000, "max": 600000},
+    {"value": "60-70", "label": "60-70万", "min": 600000, "max": 700000},
+    {"value": "70-80", "label": "70-80万", "min": 700000, "max": 800000},
+    {"value": "80-90", "label": "80-90万", "min": 800000, "max": 900000},
+    {"value": "90-100", "label": "90-100万", "min": 900000, "max": 1000000},
+    {"value": "100+", "label": "100万以上", "min": 1000000, "max": 0},
+]
+
+
+def tier_label(value: str) -> str:
+    for t in PRICE_TIERS:
+        if t["value"] == value:
+            return t["label"]
+    return ""
+
+
+def tier_from_price(price: int) -> str:
+    """根据具体造价反推档位，用于老数据自动归类。"""
+    if not price:
+        return ""
+    for t in PRICE_TIERS:
+        if t["max"] == 0:
+            if price >= t["min"]:
+                return t["value"]
+        elif t["min"] <= price < t["max"]:
+            return t["value"]
+    return ""
+
 
 # ----------------------------------------------------------------------------
 # 改枪码解析
@@ -323,6 +359,8 @@ CREATE TABLE IF NOT EXISTS codes (
     mode        TEXT NOT NULL DEFAULT '',
     season      TEXT NOT NULL DEFAULT '',
     price       INTEGER NOT NULL DEFAULT 0,
+    price_tier  TEXT NOT NULL DEFAULT '',
+    variant     TEXT NOT NULL DEFAULT '',
     tags        TEXT NOT NULL DEFAULT '',
     notes       TEXT NOT NULL DEFAULT '',
     video_url   TEXT NOT NULL DEFAULT '',
@@ -374,6 +412,7 @@ def init_db():
     try:
         conn.executescript(SCHEMA)
         conn.commit()
+        migrate_columns(conn)
         migrate_categories(conn)
         row = conn.execute("SELECT COUNT(*) AS n FROM codes").fetchone()
         if row["n"] == 0:
@@ -381,6 +420,23 @@ def init_db():
     finally:
         conn.close()
     ensure_password()
+
+
+def migrate_columns(conn: sqlite3.Connection):
+    """
+    给已有的老数据库补上新增字段（variant / price_tier）。
+    CREATE TABLE IF NOT EXISTS 不会给已存在的表加列，所以这里手动补。
+    """
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(codes)")}
+    added = []
+    for col, ddl in (("variant", "TEXT NOT NULL DEFAULT ''"),
+                     ("price_tier", "TEXT NOT NULL DEFAULT ''")):
+        if col not in existing:
+            conn.execute(f"ALTER TABLE codes ADD COLUMN {col} {ddl}")
+            added.append(col)
+    if added:
+        conn.commit()
+        print(f"[db] 已为 codes 表新增字段: {', '.join(added)}")
 
 
 def migrate_categories(conn: sqlite3.Connection):
@@ -740,6 +796,8 @@ class Handler(SimpleHTTPRequestHandler):
                 "ok": True, "total": total, "guns": guns, "seasons": seasons,
                 "categories": GUN_CATEGORIES, "modes": MODES,
                 "categoryCounts": counts,
+                "variants": VARIANTS,
+                "priceTiers": PRICE_TIERS,
             })
         if path == "/api/admin/session":
             return self._send_json({"ok": True,
@@ -768,8 +826,8 @@ class Handler(SimpleHTTPRequestHandler):
         if q:
             like = f"%{q}%"
             where.append("(gun_name LIKE ? OR tags LIKE ? OR notes LIKE ? OR code LIKE ? "
-                         "OR category LIKE ?)")
-            args += [like, like, like, like, like]
+                         "OR category LIKE ? OR variant LIKE ? OR price_tier LIKE ?)")
+            args += [like, like, like, like, like, like, like]
         if mode:
             where.append("mode = ?")
             args.append(mode)
@@ -799,7 +857,8 @@ class Handler(SimpleHTTPRequestHandler):
                      "   AND c2.status='published') DESC, "
                      "gun_name ASC, mode ASC, price ASC, id ASC")
 
-        sql = ("SELECT id,code,gun_name,category,mode,season,price,tags,notes,video_url,"
+        sql = ("SELECT id,code,gun_name,category,mode,season,price,price_tier,variant,"
+               "tags,notes,video_url,"
                "copied,updated_at FROM codes WHERE " + " AND ".join(where) +
                " ORDER BY " + order + " LIMIT ? OFFSET ?")
 
@@ -854,8 +913,8 @@ class Handler(SimpleHTTPRequestHandler):
         conn = db_connect()
         try:
             rows = conn.execute(
-                "SELECT id,code,gun_name,category,mode,season,price,tags,notes,"
-                "video_url,copied,updated_at FROM codes "
+                "SELECT id,code,gun_name,category,mode,season,price,price_tier,variant,"
+                "tags,notes,video_url,copied,updated_at FROM codes "
                 "WHERE status='published' ORDER BY copied DESC, id DESC").fetchall()
         finally:
             conn.close()
@@ -984,8 +1043,9 @@ class Handler(SimpleHTTPRequestHandler):
         where, args = [], []
         if q:
             like = f"%{q}%"
-            where.append("(gun_name LIKE ? OR code LIKE ? OR tags LIKE ?)")
-            args += [like, like, like]
+            where.append("(gun_name LIKE ? OR code LIKE ? OR tags LIKE ? "
+                         "OR notes LIKE ? OR variant LIKE ?)")
+            args += [like, like, like, like, like]
         sql = ("SELECT * FROM codes "
                + ("WHERE " + " AND ".join(where) + " " if where else "")
                + "ORDER BY id DESC LIMIT 3000")
@@ -1023,6 +1083,9 @@ class Handler(SimpleHTTPRequestHandler):
                     "mode": r.get("mode") or defaults.get("mode") or "",
                     "season": r.get("season") or defaults.get("season") or "",
                     "price": int(r.get("price") or 0),
+                    "price_tier": (r.get("priceTier") or defaults.get("priceTier")
+                                   or ""),
+                    "variant": (r.get("variant") or defaults.get("variant") or ""),
                     "tags": (r.get("tags") or "").strip(),
                     "notes": (r.get("notes") or "").strip(),
                     "video_url": (r.get("videoUrl") or "").strip(),
@@ -1041,6 +1104,8 @@ class Handler(SimpleHTTPRequestHandler):
                     "mode": p.get("mode") or defaults.get("mode") or "",
                     "season": p.get("season") or defaults.get("season") or "",
                     "price": 0,
+                    "price_tier": defaults.get("priceTier") or "",
+                    "variant": defaults.get("variant") or "",
                     "tags": (p.get("tags") or "").strip(),
                     "notes": (p.get("notes") or "").strip(),
                     "video_url": "",
@@ -1061,18 +1126,21 @@ class Handler(SimpleHTTPRequestHandler):
                     # 已存在的码：覆盖可编辑字段，但保留复制计数
                     conn.execute(
                         "UPDATE codes SET gun_name=?,category=?,mode=?,season=?,tags=?,"
-                        "notes=?,video_url=?,updated_at=? WHERE code=?",
+                        "notes=?,video_url=?,price=?,price_tier=?,variant=?,"
+                        "updated_at=? WHERE code=?",
                         (r["gunName"], r["category"], r["mode"], r["season"],
-                         r["tags"], r["notes"], r["video_url"], ts, r["code"]))
+                         r["tags"], r["notes"], r["video_url"], r["price"],
+                         r["price_tier"], r["variant"], ts, r["code"]))
                     updated += 1
                 else:
                     conn.execute(
-                        "INSERT INTO codes (code,gun_name,category,mode,season,price,tags,"
-                        "notes,video_url,copied,status,created_at,updated_at) "
-                        "VALUES (?,?,?,?,?,?,?,?,?,0,'published',?,?)",
+                        "INSERT INTO codes (code,gun_name,category,mode,season,price,"
+                        "price_tier,variant,tags,notes,video_url,copied,status,"
+                        "created_at,updated_at) "
+                        "VALUES (?,?,?,?,?,?,?,?,?,?,?,0,'published',?,?)",
                         (r["code"], r["gunName"], r["category"], r["mode"],
-                         r["season"], r["price"], r["tags"], r["notes"],
-                         r["video_url"], ts, ts))
+                         r["season"], r["price"], r["price_tier"], r["variant"],
+                         r["tags"], r["notes"], r["video_url"], ts, ts))
                     inserted += 1
             conn.commit()
         finally:
@@ -1081,42 +1149,77 @@ class Handler(SimpleHTTPRequestHandler):
                                 "updated": updated, "total": len(rows)})
 
     def api_save(self):
-        """单条编辑（后台表格里改字段）。"""
+        """
+        单条编辑。只更新请求里**显式出现**的字段，
+        没传的字段保持原值 —— 否则客户端只改一个字段会把其余字段清空。
+        """
         payload = self._json_body()
         code = (payload.get("code") or "").strip()
         if not code:
             return self._send_json({"ok": False, "error": "缺少 code"}, 400)
-        fields = {
-            "gun_name": (payload.get("gunName") or "").strip(),
-            "category": (payload.get("category") or "其他").strip(),
-            "mode": (payload.get("mode") or "").strip(),
-            "season": (payload.get("season") or "").strip(),
-            "tags": (payload.get("tags") or "").strip(),
-            "notes": (payload.get("notes") or "").strip(),
-            "video_url": (payload.get("videoUrl") or "").strip(),
-            "status": (payload.get("status") or "published").strip(),
-        }
-        try:
-            fields["price"] = int(payload.get("price") or 0)
-        except (TypeError, ValueError):
-            fields["price"] = 0
+
         conn = db_connect()
         try:
-            existed = conn.execute("SELECT id FROM codes WHERE code=?",
-                                   (code,)).fetchone()
-            if not existed:
+            row = conn.execute("SELECT * FROM codes WHERE code=?", (code,)).fetchone()
+            if not row:
                 return self._send_json({"ok": False, "error": "码不存在"}, 404)
+            cur = dict(row)
+
+            # 请求体里出现的字段才覆盖
+            def given(key):
+                return key in payload
+
+            if given("gunName"):
+                cur["gun_name"] = (payload.get("gunName") or "").strip() or "未命名"
+            if given("category"):
+                cur["category"] = (payload.get("category") or "其他").strip()
+            if given("mode"):
+                cur["mode"] = (payload.get("mode") or "").strip()
+            if given("season"):
+                cur["season"] = (payload.get("season") or "").strip()
+            if given("tags"):
+                cur["tags"] = (payload.get("tags") or "").strip()
+            if given("notes"):
+                cur["notes"] = (payload.get("notes") or "").strip()
+            if given("videoUrl"):
+                cur["video_url"] = (payload.get("videoUrl") or "").strip()
+            if given("status"):
+                cur["status"] = (payload.get("status") or "published").strip()
+            if given("variant"):
+                v = (payload.get("variant") or "").strip()
+                cur["variant"] = v if v in VARIANTS else ""
+            if given("priceTier"):
+                t = (payload.get("priceTier") or "").strip()
+                cur["price_tier"] = t if (not t or tier_label(t)) else ""
+            if given("price"):
+                try:
+                    cur["price"] = int(payload.get("price") or 0)
+                except (TypeError, ValueError):
+                    cur["price"] = 0
+
+            # 档位与具体价互相补全
+            if not cur["price"] and cur["price_tier"]:
+                for t in PRICE_TIERS:
+                    if t["value"] == cur["price_tier"]:
+                        cur["price"] = t["min"]
+                        break
+            if not cur["price_tier"] and cur["price"] > 0:
+                cur["price_tier"] = tier_from_price(cur["price"])
+
             conn.execute(
                 "UPDATE codes SET gun_name=?,category=?,mode=?,season=?,tags=?,notes=?,"
-                "video_url=?,status=?,price=?,updated_at=? WHERE code=?",
-                (fields["gun_name"] or "未命名", fields["category"], fields["mode"],
-                 fields["season"], fields["tags"], fields["notes"],
-                 fields["video_url"], fields["status"], fields["price"],
+                "video_url=?,status=?,price=?,price_tier=?,variant=?,"
+                "updated_at=? WHERE code=?",
+                (cur["gun_name"] or "未命名", cur["category"], cur["mode"],
+                 cur["season"], cur["tags"], cur["notes"], cur["video_url"],
+                 cur["status"], cur["price"], cur["price_tier"], cur["variant"],
                  now_iso(), code))
             conn.commit()
         finally:
             conn.close()
-        return self._send_json({"ok": True})
+        return self._send_json({"ok": True, "price": cur["price"],
+                                "priceTier": cur["price_tier"],
+                                "variant": cur["variant"]})
 
     def api_delete(self):
         payload = self._json_body()

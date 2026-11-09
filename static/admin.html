@@ -63,6 +63,7 @@ SCAR-H战斗步枪-5116089223937551183-烽火地带"></textarea>
                 <option value="">按解析结果</option>
                 <option value="烽火地带">烽火地带</option>
                 <option value="全面战场">全面战场</option>
+                <option value="黑潮爆破">黑潮爆破</option>
               </select>
             </label>
             <label>默认类型
@@ -79,6 +80,32 @@ SCAR-H战斗步枪-5116089223937551183-烽火地带"></textarea>
             <label class="chk">
               <input id="dCommit" type="checkbox" checked> 直接入库
             </label>
+          </div>
+
+          <!-- 配装档位：三选一，导入时统一套用到这批数据 -->
+          <div class="quick-row">
+            <span class="quick-label">配装档位</span>
+            <div class="variant-picker" id="dVariant">
+              <button type="button" class="variant-btn" data-val="">不指定</button>
+              <button type="button" class="variant-btn" data-val="丐版">丐版</button>
+              <button type="button" class="variant-btn" data-val="半改">半改</button>
+              <button type="button" class="variant-btn" data-val="满改">满改</button>
+            </div>
+          </div>
+
+          <!-- 造价档位：单选下拉，切到哪个档就套哪个 -->
+          <div class="quick-row">
+            <span class="quick-label">造价档位</span>
+            <select id="dPriceTier" class="tier-select">
+              <option value="">不指定</option>
+            </select>
+          </div>
+
+          <!-- 备注：导入这批时统一写入 -->
+          <div class="quick-row">
+            <span class="quick-label">备注</span>
+            <input id="dNotes" type="text" class="notes-input"
+                   placeholder="可打字提示，例如：适合新手，压枪稳" maxlength="200">
           </div>
 
           <div class="import-btns">
@@ -114,15 +141,16 @@ SCAR-H战斗步枪-5116089223937551183-烽火地带"></textarea>
         <table class="atable">
           <thead>
             <tr>
-              <th style="width:190px">枪名</th>
-              <th style="width:64px">类型</th>
-              <th style="width:84px">模式</th>
-              <th style="width:58px">赛季</th>
-              <th style="width:74px">造价</th>
-              <th style="width:150px">标签</th>
-              <th>改枪码</th>
-              <th style="width:52px">复制</th>
-              <th style="width:66px">状态</th>
+              <th style="width:170px">枪名</th>
+              <th style="width:60px">类型</th>
+              <th style="width:78px">模式</th>
+              <th style="width:50px">赛季</th>
+              <th style="width:92px">配装</th>
+              <th style="width:104px">造价档位</th>
+              <th style="width:150px">备注</th>
+              <th style="width:120px">改枪码</th>
+              <th style="width:44px">复制</th>
+              <th style="width:62px">状态</th>
               <th style="width:96px">操作</th>
             </tr>
           </thead>
